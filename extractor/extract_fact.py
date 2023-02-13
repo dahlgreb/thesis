@@ -577,7 +577,12 @@ def extract_facts_from_summary(summary, nlp):
                         phrase_mod = preposition + ' ' + tok.text
                         verb = tok.head.head.head.text
                         verb_stem = morphy(verb, tok.head.head.head.pos_) + '_' + str(tok.head.head.head.i)
-                        subj = subj_verb[verb_stem][-1][0][0]
+                        if verb_stem in subj_verb:
+                            subj = subj_verb[verb_stem][-1][0][0]
+                        else:
+                            print('verb not found in subj verb relation')
+                            print(verb_stem)
+                            print(subj_verb)
 
                         if subj in noun_modifiers:
                             noun_modifiers[subj].append([[phrase_mod, tok.pos_], False])

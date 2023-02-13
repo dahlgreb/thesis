@@ -6,6 +6,8 @@ from evaluation.evaluation_utils import count_matched_fact
 from evaluation.factual_consistency.measure_factual_consistency import measure_factual_consistency
 from extractor.extract_fact import extract_facts_from_summary
 from analyzer.wordnet_synsets.wordnet_synsets import load_synsets
+# from evaluation.token_importance import *
+from evaluation.token_importance.evaluate import measure_token_importance
 
 
 def load_embeddings(pretrained_embeddings_path):
@@ -57,9 +59,11 @@ def measure_overall_quality_score(summary, source, table, nlp, configs):
     factual_consistency = measure_factual_consistency(noun_modifiers, obj_counter, subj_verb, verb_obj, subj_verb_obj,
                                                       noun_neg,
                                                       event_neg, event_modifiers)
+    token_importance_score = measure_token_importance(summary)
     print(f'Factual consistency score: {factual_consistency}')
     print(f'Comprehensiveness score: {comprehensiveness}')
     print(f'Compression rate: {compression_rate}')
+    print(f'Token Importance: {token_importance_score}')
 
     cp = np.exp(tau - compression_rate) if tau - compression_rate < 0 else 1
 

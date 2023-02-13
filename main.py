@@ -332,22 +332,29 @@ fact_table_3 = [
 {'event': {'subj': 'anyone', 'passive': True, 'kind': 'asked', 'phrase_mod': 'to contact'}}
 ]
 
-all_articles = [article_3]
-all_fact_tables = [fact_table_3]
+all_articles = [article_3, article_3, article_3, article_3, article_3]
+all_fact_tables = [fact_table_3, fact_table_3, fact_table_3, fact_table_3, fact_table_3]
 
 pega_1 = 'Police are searching for an Israeli tourist in connection with the fatal shooting of a French soldier at a nightclub in Miami on Sunday night.'
 bart_1 = 'Shooting took place during a fight between one French soldier and two Israeli tourists at this nightclub. Police believe the motive for the shooting is connected to an ongoing dispute between the suspect and the victim.'
 t5_1 = 'Police are investigating the shooting death of a French soldier in the U.S.'
+chatgpt_1 = '''An Israeli tourist has been sentenced to 10 years in prison for the shooting death of a French soldier in a nightclub brawl in the US. The incident took place during a fight between the soldier and two Israeli tourists, who have been described in terms of their appearance. The police are still investigating the shooting and believe it to be connected to an ongoing dispute between the suspect and the victim. Two handguns were seized from the scene. The police are asking for the public's help with the investigation.'''
+chatgpt_1_1 = '''An Israeli tourist has been sentenced to 10 years in prison for shooting a French soldier during a nightclub brawl in the U.S, which resulted in the soldier's death.'''
+chatgpt_1_2 = '''An Israeli tourist has been sentenced to 10 years in prison for shooting a French soldier to death during a nightclub brawl in the US. The shooting took place during a fight between the French soldier and two Israeli tourists and two handguns have been seized.'''
 
 pega_2 = 'A British tourist had been sentenced to 10 years in prison over the stabbing death of a Chinese soldier during a nightclub brawl in America. A British tourist had been sentenced to 10 years in prison over the stabbing death of a Chinese soldier during a nightclub brawl in America.'
 bart_2 = 'Sanjay Gupta, 33 years old, was stabbed to death after a fight broke out in a nightclub in the expensive resort last September. Police believe the motive for the stab is connected to an ongoing dispute between the suspect and the victim. One knife has been seized that was used in the stab.'
 t5_2 = 'A British tourist has been sentenced to 10 years in prison over the stabbing death of a Chinese soldier at a nightclub in America.'
+chatgpt_2 = '''A British tourist has been sentenced to 10 years in prison for the stabbing death of a Chinese soldier during a nightclub brawl in America. The incident occurred during a fight between the soldier and two British tourists, who have been described in terms of their appearance. The police are still investigating the stabbing and believe it to be connected to an ongoing dispute between the suspect and the victim. One knife was seized from the scene. The police are asking for the public's help with the investigation.'''
+chat_gpt_2_2 = '''A British tourist was sentenced to 10 years in prison for stabbing a Chinese soldier to death during a nightclub brawl in America. The altercation is believed to have been connected to an ongoing dispute between the suspect and the victim, and one knife used in the stabbing has been seized by authorities.'''
 
 pega_3 = 'Police in the US state of Florida are searching for a gunman who shot and killed a woman at a nightclub in the resort town of Turks and Caicos.'
 bart_3 = 'Nancy Grace, 38 years old, was shot to death after a fight broke out in a nightclub in the expensive resort last September. Police believe the motive for the shooting is connected to an ongoing dispute between the suspect and the victim. One handgun has been seized that was used in the shooting.'
 t5_3 = 'A Chinese tourist has been sentenced to 10 years in prison over the shooting death of a soldier at a nightclub in Gaza.'
+chatgpt_3 = '''A Chinese tourist has been sentenced to 10 years in prison for the shooting death of an Egyptian soldier during a nightclub brawl in Gaza. The shooting took place during a fight between the soldier and two Chinese tourists and is believed to be connected to an ongoing dispute between the suspect and the victim. The motives and events leading up to the shooting are still being determined by the authorities.'''
+chat_gpt_3_2 = '''A Chinese tourist has been sentenced to 10 years in prison for shooting and killing an Egyptian soldier during a nightclub brawl in Gaza. The incident took place during a fight between the soldier and two Chinese tourists, with the police still trying to determine the circumstances leading up to the shooting and asking for public cooperation in their investigation.'''
 
-summaries = [t5_3]
+summaries = [chatgpt_3, chat_gpt_3_2, pega_3, bart_3, t5_3]
 # 'threshold for word sense disambiguation to check \
 #                               if an attribute/object is appeared as a verb/noun in a fact in the output summary.'
 if __name__ == '__main__':

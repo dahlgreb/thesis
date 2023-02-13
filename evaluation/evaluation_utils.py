@@ -682,12 +682,12 @@ def remove_indices(token):
             sub_toks = token.split()
             for sub_tok in sub_toks:
                 if '_' in sub_tok:
-                    sub_tok_name, sub_tok_idx = sub_tok.split('_')
+                    sub_tok_name = sub_tok.split('_')[0]
                     cleaned_token.append(sub_tok_name)
                 else:
                     cleaned_token.append(sub_tok)
         else:
-            sub_tok_name, sub_tok_idx = token.split('_')
+            sub_tok_name = token.split('_')[0]
             cleaned_token.append(sub_tok_name)
 
         return ' '.join(cleaned_token)
@@ -906,6 +906,9 @@ def match_count_abstract_fact(table, noun, modifiers, noun_synsets, adj_synsets,
 
 def found_subj_obj_helper(subj, subj_pos, obj, obj_pos, fact_subj, fact_obj, is_summ_passive, is_fact_passive,
                           embeddings_dict, threshold):
+
+    if fact_obj is None:
+        return False
 
     summ_subj = morphy(remove_indices(subj).lower(), 'noun')
     summ_obj = morphy(remove_indices(obj).lower(), 'noun')
