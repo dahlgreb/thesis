@@ -1,7 +1,7 @@
 import itertools
 
 from evaluation.evaluation_utils import remove_indices
-from ..token_importance.evaluate import measure_fact_importance
+# from ..token_importance.evaluate import measure_fact_importance
 
 
 def combine_extracted_facts(noun_modifiers, obj_counter, subj_verb, verb_obj, subj_verb_obj, noun_neg, event_neg,
