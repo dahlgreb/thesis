@@ -342,7 +342,10 @@ def extract_facts_from_summary(summary, nlp):
             if tok.head.text in months:
                 year = tok.text
                 noun = morphy(tok.head.head.text, tok.head.head.pos_) + '_' + str(tok.head.head.i)
-                noun_modifiers[noun].append([[year, tok.pos_], False])
+                if noun in noun_modifiers:
+                    noun_modifiers[noun].append([[year, tok.pos_], False])
+                else:
+                    noun_modifiers[noun] = [[[year, tok.pos_], False]]
 
             # count
             elif tok.head.pos_ == 'NOUN':
@@ -583,7 +586,11 @@ def extract_facts_from_summary(summary, nlp):
                             print('verb not found in subj verb relation')
                             print(verb_stem)
                             print(subj_verb)
-
+                            for k in subj_verb:
+                                if verb_stem.split('_')[0] in k:
+                                    subj = k[-1][0][0]
+                                else:
+                                    continue
                         if subj in noun_modifiers:
                             noun_modifiers[subj].append([[phrase_mod, tok.pos_], False])
                         else:

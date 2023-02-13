@@ -73,6 +73,7 @@ def morphy(word, pos):
     wn_pos = get_pos(pos)
     if not wn_pos:
         print('unrecognized pos!')
+        print(word)
         return word
         # print('unrecognized pos!')
         # print(word, pos)
