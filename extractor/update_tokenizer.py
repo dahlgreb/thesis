@@ -89,8 +89,11 @@ def combine_count_mod(doc):
     while i < len(doc):
         token = doc[i]
         if token.dep_ == 'amod' and token.head.pos_ == 'NUM':
-            count_mod_indices.append([token.i, token.head.i])
-            i = token.head.i + 1
+            if token.head.i + 1 != i:
+                count_mod_indices.append([token.i, token.head.i])
+                i = token.head.i + 1
+            else:
+                i += 1
         else:
             i += 1
     return count_mod_indices
