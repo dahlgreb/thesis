@@ -55,6 +55,9 @@ def get_pos(pos):
 def morphy(word, pos):
     if not pos:
         return wn.morphy(word.lower(), None)
+    
+    if pos.lower() == 'adp':
+        return word
 
     if pos.lower() == 'sconj':
         return word
@@ -73,7 +76,7 @@ def morphy(word, pos):
     wn_pos = get_pos(pos)
     if not wn_pos:
         print('unrecognized pos!')
-        print(word)
+        print(word, pos)
         return word
         # print('unrecognized pos!')
         # print(word, pos)
