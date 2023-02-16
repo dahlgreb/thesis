@@ -26,7 +26,7 @@ def get_compounds(doc):
                 if idx_to_extend != -1:
                     compound_indices[idx_to_extend][1] = token.head.i
                 else:
-                    compound_indices.append([token.i, token.head.i])
+                    compound_indices.append(sorted([token.i, token.head.i]))
 
     compounds = [doc[compound_idx[0]: compound_idx[1] + 1] for compound_idx in compound_indices]
 
@@ -39,7 +39,7 @@ def combine_npadvmod(doc):
     for token in doc:
         if token.dep_ == 'npadvmod' and token.pos_ in ['NOUN',
                                                        'PROPN'] and token.head.dep_ == 'amod' and token.head.pos_ == 'VERB':
-            npadvmod_indices.append([token.i, token.head.i])
+            npadvmod_indices.append(sorted([token.i, token.head.i]))
     return npadvmod_indices
 
 
@@ -47,7 +47,7 @@ def combine_verb_prt(doc):
     verb_indices = []
     for token in doc:
         if token.dep_ == 'prt':
-            verb_indices.append([token.head.i, token.i])
+            verb_indices.append(sorted([token.head.i, token.i]))
     return verb_indices
 
 
@@ -55,7 +55,7 @@ def combine_age(doc):
     age_indices = []
     for token in doc:
         if token.dep_ == 'nummod' and 'year' in token.head.text and token.head.dep_ == 'npadvmod':
-            age_indices.append([token.i, token.head.head.i])
+            age_indices.append(sorted([token.i, token.head.head.i]))
     return age_indices
 
 
@@ -65,9 +65,9 @@ def combine_times(doc):
     for token in doc:
         if token.dep_ == 'advmod' and token.text in ['a.m', 'am', 'p.m', 'pm', 'a.m.',
                                                      'p.m.'] and token.head.pos_ == 'NUM':
-            time_indices.append([token.head.i, token.i])
+            time_indices.append(sorted([token.head.i, token.i]))
         elif token.dep_ == 'nummod' and token.head.text in ['a.m', 'am', 'p.m', 'pm', 'a.m.', 'p.m.']:
-            time_indices.append([token.i, token.head.i])
+            time_indices.append(sorted([token.i, token.head.i]))
 
     return time_indices
 
@@ -78,7 +78,7 @@ def combine_prep(doc):
     for token in doc:
         if token.dep_ == 'prep' and token.text in ['to'] and token.head.dep_ == 'prep' and token.head.text in [
             'according']:
-            prep_indices.append([token.head.i, token.i])
+            prep_indices.append(sorted([token.head.i, token.i]))
 
     return prep_indices
 
@@ -89,11 +89,8 @@ def combine_count_mod(doc):
     while i < len(doc):
         token = doc[i]
         if token.dep_ == 'amod' and token.head.pos_ == 'NUM':
-            if token.head.i + 1 != i:
-                count_mod_indices.append([token.i, token.head.i])
-                i = token.head.i + 1
-            else:
-                i += 1
+            count_mod_indices.append(sorted([token.i, token.head.i]))
+            i = max(token.head.i + 1,token.i + 1)
         else:
             i += 1
     return count_mod_indices
@@ -110,8 +107,8 @@ def combine_connected_words(doc):
     while i < len(doc):
         token = doc[i]
         if token.text == '-':
-            connected_words_indices.append([token.i - 1, token.head.i])
-            i = token.head.i + 1
+            connected_words_indices.append(sorted([token.i - 1, token.head.i]))
+            i = max(token.head.i + 1, i+1)
         else:
             i += 1
     return connected_words_indices
