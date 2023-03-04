@@ -1,5 +1,8 @@
 import itertools
+import pickle
 
+from sentence_transformers import SentenceTransformer
+from sklearn.linear_model import LinearRegression
 from evaluation.evaluation_utils import remove_indices
 # from ..token_importance.evaluate import measure_fact_importance
 
@@ -21,6 +24,14 @@ def combine_extracted_facts(noun_modifiers, obj_counter, subj_verb, verb_obj, su
 
 
 def count_consistent_facts(extracted_facts):
+    num_consistent_fact = 0
+    for key in extracted_facts:
+        for val in extracted_facts[key]:
+            if val[1]:
+                num_consistent_fact += 1
+    return num_consistent_fact
+
+def sum_consistent_fact_score(extracted_facts, scores):
     num_consistent_fact = 0
     for key in extracted_facts:
         for val in extracted_facts[key]:
@@ -84,25 +95,38 @@ def get_consistent_facts(extracted_facts):
                     consistent_facts[fact_wo_index] = [attr_val]
     return consistent_facts
 
+
+def clean_attrs(attrs):
+    if type(attrs[-1]) == bool:
+        return clean_attrs(attrs[:-1])
+    if type(attrs) == list:
+        if type(attrs[0])==list:
+            return ' '.join([clean_attrs(x) for x in attrs])
+        elif attrs[1] == 'PROPN' or attrs[1] == 'NUM':
+            return attrs[1]
+        else:
+            return clean_attrs(attrs[0])
+    elif type(attrs) == tuple:
+        return ' '.join([clean_attrs(x) for x in attrs])
+    else:
+        if '_' in attrs:
+            return attrs.split('_')[0]
+        else:
+            return attrs
+
+
 def clean_facts(facts):
     cleaned = []
-    for k in facts:
-        cleaned_fact = ''
-        cleaned_fact += k
-        for tok in facts[k]:
-            if type(tok) == str:
-                if '_' in tok:
-                    cleaned_fact += ' '+tok.split('_')[0]
-                else:
-                    cleaned_fact += ' '+tok
-            elif type(tok) == list:
-                for sub_tok in tok:
-                    if '_' in sub_tok:
-                        cleaned_fact += ' '+sub_tok.split('_')[0]
-                    else:
-                        cleaned_fact += ' '+sub_tok
-        cleaned.append(cleaned_fact)
-    return cleaned
+    consistent = []
+    for fact in facts:
+            # print(f'fact {fact}')
+            # print(facts[fact])
+            cleaned_subj = fact.split('_')[0]
+            for attrs in facts[fact]:
+                for attr in attrs[:-1]:
+                    cleaned.append(f'{cleaned_subj} {" ".join([attr[0].split("_")[0]])}')
+                consistent.append(attrs[-1])
+    return cleaned, consistent
 
 
 def measure_factual_consistency(noun_modifiers, obj_counter, subj_verb, verb_obj, subj_verb_obj, noun_neg, event_neg,
@@ -110,23 +134,51 @@ def measure_factual_consistency(noun_modifiers, obj_counter, subj_verb, verb_obj
     extracted_facts = combine_extracted_facts(noun_modifiers, obj_counter, subj_verb, verb_obj, subj_verb_obj, noun_neg,
                                               event_neg, event_modifiers)
 
+    simple_model = pickle.load(open('fact_lin_reg_masked.pkl', 'rb'))
+    bert_model = SentenceTransformer('all-MiniLM-L6-v2')
+    cleaned_facts, consistent = clean_facts(extracted_facts)
+    facts_importances = simple_model.predict(bert_model.encode(cleaned_facts))
+    for score, fact in zip(facts_importances,cleaned_facts):
+        print(score, fact)
+    inconsistent_scores = []
+    consistent_scores = []
+    for score, is_consistent in zip(facts_importances, consistent):
+            if is_consistent:
+                consistent_scores.append(score)
+            else:
+                inconsistent_scores.append(score)
     inconsistent_facts = get_inconsistent_facts(extracted_facts)
-    i_facts_importance = measure_fact_importance(clean_facts(inconsistent_facts))
-    print()
+
     if inconsistent_facts:
-        print(f"***** Inconsistent facts found: {inconsistent_facts} !!! *****")
-        print(f'importance_scores: {i_facts_importance}')
+        print("*****")
+        print("Inconsistent facts found:")
+        count = 0
+        for subj in inconsistent_facts:
+            for fact in inconsistent_facts[subj]:
+                print(inconsistent_scores[count], subj, fact)
+                count += 1
+        print("*****")
     else:
         print(f"***** Inconsistent facts not found !!! *****")
     print()
 
     consistent_facts = get_consistent_facts(extracted_facts)
-    c_facts_importance = measure_fact_importance(clean_facts(consistent_facts))
+    print("*****")
     print("List of consistent facts below:")
-    for i in range(len(consistent_facts)):
-        fact = list(consistent_facts.keys())[i]
-        print(f"\t{i + 1}. {fact}: {consistent_facts[fact]}  imp: {c_facts_importance[i]}")
+    count = 0
+    for subj in consistent_facts:
+        for fact in consistent_facts[subj]:
+            print(consistent_scores[count], subj, fact)
+            count += 1
+    print("*****")
     print()
+
+    for fact in extracted_facts:
+        print(fact, extracted_facts[fact])
+    print(cleaned_facts)
+    print(inconsistent_facts)
+    print(consistent_facts)
+
     consistent_fact_count = count_consistent_facts(extracted_facts)
 
     return consistent_fact_count / len(list(itertools.chain.from_iterable(extracted_facts.values())))

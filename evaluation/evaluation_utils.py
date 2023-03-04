@@ -1340,7 +1340,7 @@ def handle_subj_verb_obj(table, noun_modifiers, obj_counter, subj_verb_obj, noun
     return fact_count
 
 # TODO: add verb_obj!
-def count_matched_fact(table, noun_modifiers, obj_counter, subj_verb, verb_obj, subj_verb_obj, noun_neg, event_neg,
+def count_matched_fact(table, table_importance, noun_modifiers, obj_counter, subj_verb, verb_obj, subj_verb_obj, noun_neg, event_neg,
                        event_modifiers, victim_map, embeddings_dict, noun_synsets, adj_synsets, adv_synsets,
                        verb_synsets, threshold=0.8, synset_path_threshold=1 / 5):
     """
@@ -1366,7 +1366,7 @@ def count_matched_fact(table, noun_modifiers, obj_counter, subj_verb, verb_obj, 
     # subj_verb_obj
     fact_count += handle_subj_verb_obj(table, noun_modifiers, obj_counter, subj_verb_obj, noun_neg, event_neg, event_modifiers, embeddings_dict, threshold)
 
-    for fact in table:
+    for fact, importance in zip(table,table_importance):
         # event
         # subj_verb, verb_obj, event_neg, event_modifiers
         if list(fact.keys())[0] == 'event':
@@ -1681,7 +1681,7 @@ def count_matched_fact(table, noun_modifiers, obj_counter, subj_verb, verb_obj, 
                     # attrs = set(fact['person'][key] for key in fact['person'] if key != 'kind')
 
                     # attrs = split_connected_words(attrs, prepositions)
-
+                    # print(noun, modifiers)
                     fact_count += handle_modifiers(fact, 'person', noun, 'noun', modifiers, prepositions, threshold,
                                                    table, embeddings_dict, include_phrase_mod=include_phrase_mod)
 

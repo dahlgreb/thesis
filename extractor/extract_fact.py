@@ -46,6 +46,8 @@ def extract_facts_from_summary(summary, nlp):
     doc = update_tokenizer(doc)
 
     for tok in doc:
+        # print(f'tok: {tok}')
+        # print(noun_modifiers)
         # adjective/noun modifier
         if (tok.dep_ == 'amod' or tok.dep_ == 'nmod' or tok.dep_ == 'compound') and tok.head.pos_ in ['NOUN', 'PROPN']:
             # modifier and object

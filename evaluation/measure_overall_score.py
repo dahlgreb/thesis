@@ -6,8 +6,9 @@ from evaluation.evaluation_utils import count_matched_fact
 from evaluation.factual_consistency.measure_factual_consistency import measure_factual_consistency
 from extractor.extract_fact import extract_facts_from_summary
 from analyzer.wordnet_synsets.wordnet_synsets import load_synsets
+from evaluation.fact_importance.score_fact_importance import get_fact_importance_table
 # from evaluation.token_importance import *
-from evaluation.token_importance.evaluate import measure_token_importance
+# from evaluation.token_importance.evaluate import measure_token_importance
 
 
 def load_embeddings(pretrained_embeddings_path):
@@ -50,7 +51,10 @@ def measure_overall_quality_score(summary, source, table, nlp, configs):
         summary, nlp)
 
     victim_map = victim_maps[grammar_type]
-    fact_count = count_matched_fact(table, noun_modifiers, obj_counter, subj_verb, verb_obj, subj_verb_obj, noun_neg,
+    table_importance = get_fact_importance_table(table)
+    # for fact, score in zip(table, table_importance):
+    #     print(score, fact)
+    fact_count = count_matched_fact(table, table_importance, noun_modifiers, obj_counter, subj_verb, verb_obj, subj_verb_obj, noun_neg,
                                     event_neg, event_modifiers, victim_map, embeddings_dict, noun_synsets, adj_synsets,
                                     adv_synsets, verb_synsets, threshold)
 
@@ -59,16 +63,18 @@ def measure_overall_quality_score(summary, source, table, nlp, configs):
     factual_consistency = measure_factual_consistency(noun_modifiers, obj_counter, subj_verb, verb_obj, subj_verb_obj,
                                                       noun_neg,
                                                       event_neg, event_modifiers)
-    token_importance_score = measure_token_importance(summary)
+
+    # token_importance_score = measure_token_importance(summary)
     print(f'Factual consistency score: {factual_consistency}')
     print(f'Comprehensiveness score: {comprehensiveness}')
     print(f'Compression rate: {compression_rate}')
-    print(f'Token Importance: {token_importance_score}')
+    # print(f'Token Importance: {token_importance_score}')
 
     cp = np.exp(tau - compression_rate) if tau - compression_rate < 0 else 1
 
     s = 0 if not comprehensiveness else (alpha * (comprehensiveness * cp) + beta * factual_consistency) / (alpha + beta)
     print(f'Overall quality of the summarizer: {s}')
+    # exit()
 
 if __name__ == '__main__':
     import json
