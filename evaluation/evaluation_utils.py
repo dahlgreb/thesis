@@ -139,9 +139,10 @@ def get_related_child_attrs(word, pos, threshold, prepositions, table, attrs, vi
                                                         embeddings_dict)
 
 
-def handle_modifiers_helper(mod, attrs, prepositions, embeddings_dict, threshold):
+def handle_modifiers_helper(fact_index, importance, mod, attrs, prepositions, embeddings_dict, threshold):
     fact_count = 0
     has_mod = False
+    global seen_facts
 
     # check if mod is phrase mod
     if mod[0][0].split(' ')[0] in prepositions or ' '.join(mod[0][0].split(' ')[:2]) in prepositions:
@@ -231,7 +232,8 @@ def handle_modifiers_helper(mod, attrs, prepositions, embeddings_dict, threshold
 
     if not mod[1] and has_mod:
         fact_count += 1
-        mod[1] = True
+        mod[1] = (True, importance)
+        seen_facts.add(fact_index)
     return fact_count
 
 
@@ -264,7 +266,7 @@ def filter_attrs(pos, fact, fact_type, include_phrase_mod):
 # def handle_modifiers(attrs, modifiers, prepositions, threshold):
 # fact_type: 'object', 'event', ...
 # fact: fact element in a table
-def handle_modifiers(fact, fact_type, obj, obj_pos, modifiers, prepositions, threshold, table, embeddings_dict,
+def handle_modifiers(fact, importance, fact_index, fact_type, obj, obj_pos, modifiers, prepositions, threshold, table, embeddings_dict,
                      include_phrase_mod=False,
                      only_phrase_mod=False):
     fact_count = 0
@@ -287,7 +289,7 @@ def handle_modifiers(fact, fact_type, obj, obj_pos, modifiers, prepositions, thr
             attrs = attrs.union(related_attr_vals)
 
         attrs = split_connected_words(attrs, prepositions)
-        fact_count += handle_modifiers_helper(mod, attrs, prepositions, embeddings_dict, threshold)
+        fact_count += handle_modifiers_helper(fact_index, importance, mod, attrs, prepositions, embeddings_dict, threshold)
     return fact_count
 
 
@@ -342,7 +344,7 @@ def match_obj(verb, obj, obj_pos, threshold, fact_type, table, victim_map, embed
     return False
 
 
-def match_anded_obj(obj, fact_obj_list, pos, threshold, victim_map, embeddings_dict, is_subj_verb=()):
+def match_anded_obj(fact_index, importance, obj, fact_obj_list, pos, threshold, victim_map, embeddings_dict, is_subj_verb=()):
     objs = obj.split('and')
     poses = pos.split()
 
@@ -367,7 +369,8 @@ def match_anded_obj(obj, fact_obj_list, pos, threshold, victim_map, embeddings_d
 
                 if len(is_subj_verb) == 4:
                     noun_modifiers, obj_counter, noun_neg, table = is_subj_verb
-                    if check_obj_modifiers(fact_obj, obj,
+                    if check_obj_modifiers(fact_index, importance,
+                                        fact_obj, obj,
                                         pos, noun_modifiers,
                                         obj_counter, noun_neg,
                                         table, embeddings_dict,
@@ -381,7 +384,7 @@ def match_anded_obj(obj, fact_obj_list, pos, threshold, victim_map, embeddings_d
     return num_obj_matched == len(objs)
 
 
-def match_ored_obj(obj, fact_obj_list, pos, threshold, victim_map, embeddings_dict, is_subj_verb=()):
+def match_ored_obj(fact_index, importance, obj, fact_obj_list, pos, threshold, victim_map, embeddings_dict, is_subj_verb=()):
     """
 
     :param obj:
@@ -420,7 +423,7 @@ def match_ored_obj(obj, fact_obj_list, pos, threshold, victim_map, embeddings_di
                                                                    threshold)):
                 if len(is_subj_verb) == 4:
                     noun_modifiers, obj_counter, noun_neg, table = is_subj_verb
-                    return check_obj_modifiers(fact_obj, obj,
+                    return check_obj_modifiers(fact_index, importance, fact_obj, obj,
                                         pos, noun_modifiers,
                                         obj_counter, noun_neg,
                                         table, embeddings_dict,
@@ -430,67 +433,67 @@ def match_ored_obj(obj, fact_obj_list, pos, threshold, victim_map, embeddings_di
     return False
 
 
-def match_obj_pair_helper(obj_1, obj_1_pos, obj_2, obj_2_pos, fact_subjs, fact_objs, threshold, victim_map,
+def match_obj_pair_helper(fact_index, importance, obj_1, obj_1_pos, obj_2, obj_2_pos, fact_subjs, fact_objs, threshold, victim_map,
                           embeddings_dict):
     # subj_matched = False
     # obj_matched = False
     if 'and' in obj_1 and 'and' in obj_2:
-        subj_matched = match_anded_obj(obj_1, fact_subjs, obj_1_pos, threshold, victim_map, embeddings_dict)
-        obj_matched = match_anded_obj(obj_2, fact_objs, obj_2_pos, threshold, victim_map, embeddings_dict)
+        subj_matched = match_anded_obj(fact_index, importance, obj_1, fact_subjs, obj_1_pos, threshold, victim_map, embeddings_dict)
+        obj_matched = match_anded_obj(fact_index, importance, obj_2, fact_objs, obj_2_pos, threshold, victim_map, embeddings_dict)
 
         return subj_matched and obj_matched
 
     elif 'and' in obj_1 and 'or' in obj_2:
-        subj_matched = match_anded_obj(obj_1, fact_subjs, obj_1_pos, threshold, victim_map, embeddings_dict)
-        obj_matched = match_ored_obj(obj_2, fact_objs, obj_2_pos, threshold, victim_map, embeddings_dict)
+        subj_matched = match_anded_obj(fact_index, importance, obj_1, fact_subjs, obj_1_pos, threshold, victim_map, embeddings_dict)
+        obj_matched = match_ored_obj(fact_index, importance, obj_2, fact_objs, obj_2_pos, threshold, victim_map, embeddings_dict)
 
         return subj_matched == obj_matched
 
     elif 'or' in obj_1 and 'and' in obj_2:
-        subj_matched = match_ored_obj(obj_1, fact_subjs, obj_1_pos, threshold, victim_map, embeddings_dict)
-        obj_matched = match_anded_obj(obj_2, fact_objs, obj_2_pos, threshold, victim_map, embeddings_dict)
+        subj_matched = match_ored_obj(fact_index, importance, obj_1, fact_subjs, obj_1_pos, threshold, victim_map, embeddings_dict)
+        obj_matched = match_anded_obj(fact_index, importance, obj_2, fact_objs, obj_2_pos, threshold, victim_map, embeddings_dict)
 
         return subj_matched == obj_matched
 
     elif 'or' in obj_1 and 'or' in obj_2:
-        subj_matched = match_ored_obj(obj_1, fact_subjs, obj_1_pos, threshold, victim_map, embeddings_dict)
-        obj_matched = match_ored_obj(obj_2, fact_objs, obj_2_pos, threshold, victim_map, embeddings_dict)
+        subj_matched = match_ored_obj(fact_index, importance, obj_1, fact_subjs, obj_1_pos, threshold, victim_map, embeddings_dict)
+        obj_matched = match_ored_obj(fact_index, importance, obj_2, fact_objs, obj_2_pos, threshold, victim_map, embeddings_dict)
 
         return subj_matched == obj_matched
 
     elif 'and' in obj_1:
-        subj_matched = match_anded_obj(obj_1, fact_subjs, obj_1_pos, threshold, victim_map, embeddings_dict)
-        obj_matched = match_obj_helper(obj_2, fact_objs, obj_2_pos, threshold, victim_map, embeddings_dict)
+        subj_matched = match_anded_obj(fact_index, importance, obj_1, fact_subjs, obj_1_pos, threshold, victim_map, embeddings_dict)
+        obj_matched = match_obj_helper(fact_index, importance, obj_2, fact_objs, obj_2_pos, threshold, victim_map, embeddings_dict)
 
         return subj_matched == obj_matched
 
     elif 'or' in obj_1:
-        subj_matched = match_ored_obj(obj_1, fact_subjs, obj_1_pos, threshold, victim_map, embeddings_dict)
-        obj_matched = match_obj_helper(obj_2, fact_objs, obj_2_pos, threshold, victim_map, embeddings_dict)
+        subj_matched = match_ored_obj(fact_index, importance, obj_1, fact_subjs, obj_1_pos, threshold, victim_map, embeddings_dict)
+        obj_matched = match_obj_helper(fact_index, importance, obj_2, fact_objs, obj_2_pos, threshold, victim_map, embeddings_dict)
 
         return subj_matched == obj_matched
 
     elif 'and' in obj_2:
-        subj_matched = match_obj_helper(obj_1, fact_subjs, obj_1_pos, threshold, victim_map, embeddings_dict)
-        obj_matched = match_anded_obj(obj_2, fact_objs, obj_2_pos, threshold, victim_map, embeddings_dict)
+        subj_matched = match_obj_helper(fact_index, importance, obj_1, fact_subjs, obj_1_pos, threshold, victim_map, embeddings_dict)
+        obj_matched = match_anded_obj(fact_index, importance, obj_2, fact_objs, obj_2_pos, threshold, victim_map, embeddings_dict)
 
         return subj_matched == obj_matched
 
     elif 'or' in obj_2:
-        subj_matched = match_obj_helper(obj_1, fact_subjs, obj_1_pos, threshold, victim_map, embeddings_dict)
-        obj_matched = match_anded_obj(obj_2, fact_objs, obj_2_pos, threshold, victim_map, embeddings_dict)
+        subj_matched = match_obj_helper(fact_index, importance, obj_1, fact_subjs, obj_1_pos, threshold, victim_map, embeddings_dict)
+        obj_matched = match_anded_obj(fact_index, importance, obj_2, fact_objs, obj_2_pos, threshold, victim_map, embeddings_dict)
 
         return subj_matched == obj_matched
 
     else:
-        subj_matched = match_obj_helper(obj_1, fact_subjs, obj_1_pos, threshold, victim_map, embeddings_dict)
-        obj_matched = match_obj_helper(obj_2, fact_objs, obj_2_pos, threshold, victim_map, embeddings_dict)
+        subj_matched = match_obj_helper(fact_index, importance, obj_1, fact_subjs, obj_1_pos, threshold, victim_map, embeddings_dict)
+        obj_matched = match_obj_helper(fact_index, importance, obj_2, fact_objs, obj_2_pos, threshold, victim_map, embeddings_dict)
 
         return subj_matched == obj_matched
 
 
 # to match (subj, obj)
-def match_obj_pair(verb, obj_1, obj_1_pos, obj_2, obj_2_pos, threshold, fact_type, table, victim_map, embeddings_dict):
+def match_obj_pair(fact_index, verb, obj_1, obj_1_pos, obj_2, obj_2_pos, threshold, fact_type, table, victim_map, embeddings_dict):
     for f_type in table:
         if f_type == fact_type:
             fact = table[f_type]
@@ -506,7 +509,7 @@ def match_obj_pair(verb, obj_1, obj_1_pos, obj_2, obj_2_pos, threshold, fact_typ
 
                 fact_objs = split_obj(fact_obj)
 
-                is_matched = match_obj_pair_helper(obj_1, obj_1_pos, obj_2, obj_2_pos, fact_subjs, fact_objs, threshold,
+                is_matched = match_obj_pair_helper(fact_index, importance, obj_1, obj_1_pos, obj_2, obj_2_pos, fact_subjs, fact_objs, threshold,
                                                    victim_map, embeddings_dict)
 
                 if is_matched:
@@ -521,7 +524,7 @@ def match_obj_pair(verb, obj_1, obj_1_pos, obj_2, obj_2_pos, threshold, fact_typ
 
                         fact_objs = split_obj(fact_obj)
 
-                        if match_obj_pair_helper(obj_1, obj_1_pos, obj_2, obj_2_pos, fact_subjs, fact_objs, threshold,
+                        if match_obj_pair_helper(fact_index, importance, obj_1, obj_1_pos, obj_2, obj_2_pos, fact_subjs, fact_objs, threshold,
                                                  victim_map, embeddings_dict):
                             return True
 
@@ -549,7 +552,7 @@ def contain_implicit_sex(obj, obj_pos, fact_obj, table, embeddings_dict, thresho
 
 # check one is sex obj others not.. all cases
 # all possible subjs and all possible objs
-def match_implicit_sex_obj_pair(verb, obj_1, obj_1_pos, obj_2, obj_2_pos, threshold, fact_type, table, victim_map,
+def match_implicit_sex_obj_pair(fact_index, importance, verb, obj_1, obj_1_pos, obj_2, obj_2_pos, threshold, fact_type, table, victim_map,
                                 embeddings_dict):
     for el in table:
         for f_type in el:
@@ -642,7 +645,7 @@ def match_implicit_sex_obj_pair(verb, obj_1, obj_1_pos, obj_2, obj_2_pos, thresh
 
                     fact_objs = split_obj(fact_obj)
 
-                    is_matched = match_obj_pair_helper(obj_1, obj_1_pos, obj_2, obj_2_pos, fact_subjs, fact_objs,
+                    is_matched = match_obj_pair_helper(fact_index, importance, obj_1, obj_1_pos, obj_2, obj_2_pos, fact_subjs, fact_objs,
                                                        threshold, victim_map, embeddings_dict)
 
                     if is_matched:
@@ -657,7 +660,7 @@ def match_implicit_sex_obj_pair(verb, obj_1, obj_1_pos, obj_2, obj_2_pos, thresh
 
                             fact_objs = split_obj(fact_obj)
 
-                            if match_obj_pair_helper(obj_1, obj_1_pos, obj_2, obj_2_pos, fact_subjs, fact_objs,
+                            if match_obj_pair_helper(fact_index, importance, obj_1, obj_1_pos, obj_2, obj_2_pos, fact_subjs, fact_objs,
                                                      threshold, victim_map, embeddings_dict):
                                 return True
 
@@ -1132,8 +1135,9 @@ def get_summ_event_modifiers(event, event_pos, event_modifiers, event_neg, embed
     return modifiers
 
 
-def check_obj_modifiers(obj, found_summ_obj_val, found_summ_obj_pos, noun_modifiers, obj_counter, noun_neg, table, embeddings_dict, threshold):
+def check_obj_modifiers(fact_index, importance, obj, found_summ_obj_val, found_summ_obj_pos, noun_modifiers, obj_counter, noun_neg, table, embeddings_dict, threshold):
     fact_count = 0
+    global seen_facts
     fact_obj_modifiers = get_fact_obj_modifiers(
         obj,
         found_summ_obj_pos, table,
@@ -1144,7 +1148,7 @@ def check_obj_modifiers(obj, found_summ_obj_val, found_summ_obj_pos, noun_modifi
                                                 noun_modifiers, obj_counter, noun_neg,
                                                 embeddings_dict, threshold)
 
-    summ_obj_modifiers_found = True
+    summ_obj_modifiers_found = (True,importance)
     for summ_obj_modifier in summ_obj_modifiers:
         summ_obj_modifier_val, summ_obj_modifier_pos = summ_obj_modifier[0]
 
@@ -1155,14 +1159,16 @@ def check_obj_modifiers(obj, found_summ_obj_val, found_summ_obj_pos, noun_modifi
 
         # count age
         if summ_obj_modifier_val.isdigit() and any(summ_obj_modifier_val in fact_obj_mod for fact_obj_mod in fact_obj_modifiers):
-            summ_obj_modifier[1] = True
+            summ_obj_modifier[1] = (True, importance)
             fact_count += 1
+            seen_facts.add(fact_index)
 
         elif summ_obj_modifier_val.lower() in fact_obj_modifiers or has_similar(
                 summ_obj_modifier_val.lower(), fact_obj_modifiers, summ_obj_modifier_pos,
                 embeddings_dict, threshold):
-            summ_obj_modifier[1] = True
+            summ_obj_modifier[1] = (True, importance)
             fact_count += 1
+            seen_facts.add(fact_index)
         else:
             summ_obj_modifiers_found = False
             break
@@ -1176,7 +1182,8 @@ def get_sub_clause(fact_mods):
     else:
         return None
 
-def check_clause_sub_clause(fact_mods, mod, embeddings_dict, threshold):
+def check_clause_sub_clause(fact_index, importance, fact_mods, mod, embeddings_dict, threshold):
+    global seen_facts
     fact_count = 0
     fact_sub_clause = get_sub_clause(fact_mods)
 
@@ -1200,10 +1207,12 @@ def check_clause_sub_clause(fact_mods, mod, embeddings_dict, threshold):
 
     if is_same:
         fact_count += 1
-        mod[1] = True
+        mod[1] = (True, importance)
+        seen_facts.add(fact_index)
     return fact_count
 
-def check_event_modifiers(src_fact_verb, summ_fact_verb, event_modifiers, event_neg, table, embeddings_dict, threshold):
+def check_event_modifiers(fact_index, importance, src_fact_verb, summ_fact_verb, event_modifiers, event_neg, table, embeddings_dict, threshold):
+    global seen_facts
     fact_count = 0
     # event modifiers
     fact_obj_modifiers = get_fact_obj_modifiers(
@@ -1221,10 +1230,11 @@ def check_event_modifiers(src_fact_verb, summ_fact_verb, event_modifiers, event_
         summ_event_modifier_val, summ_event_modifier_pos = summ_event_modifier[0]
 
         if type(summ_event_modifier_val) == tuple:
-            fact_count_to_add = check_clause_sub_clause(fact_obj_modifiers, summ_event_modifier, embeddings_dict, threshold)
+            fact_count_to_add = check_clause_sub_clause(fact_index, importance, fact_obj_modifiers, summ_event_modifier, embeddings_dict, threshold)
             if fact_count_to_add:
                 fact_count += fact_count_to_add
-                summ_event_modifier[1] = True
+                summ_event_modifier[1] = (True, importance)
+                seen_facts.add(fact_index)
             else:
                 summ_event_modifiers_found = False
         else:
@@ -1246,7 +1256,8 @@ def check_event_modifiers(src_fact_verb, summ_fact_verb, event_modifiers, event_
                     summ_event_modifier_val.lower(), fact_obj_modifiers,
                     summ_event_modifier_pos, embeddings_dict, threshold):
 
-                summ_event_modifier[1] = True
+                summ_event_modifier[1] = (True, importance)
+                seen_facts.add(fact_index)
                 fact_count += 1
             else:
                 summ_event_modifiers_found = False
@@ -1254,7 +1265,7 @@ def check_event_modifiers(src_fact_verb, summ_fact_verb, event_modifiers, event_
     return fact_count, summ_event_modifiers_found
 
 # TODO: handle when subj is obj is connected by conj
-def handle_subj_verb_obj(table, noun_modifiers, obj_counter, subj_verb_obj, noun_neg, event_neg, event_modifiers, embeddings_dict, threshold):
+def handle_subj_verb_obj(table, table_importance, noun_modifiers, obj_counter, subj_verb_obj, noun_neg, event_neg, event_modifiers, embeddings_dict, threshold):
     fact_count = 0
     # subj_verb_obj: check if subj_verb_obj must have the correct modifiers if there's any.
     for verb in subj_verb_obj:
@@ -1263,7 +1274,9 @@ def handle_subj_verb_obj(table, noun_modifiers, obj_counter, subj_verb_obj, noun
         summ_fact_verb = morphy(remove_indices(verb).lower(), 'verb')
 
         # check if subj_obj_pair appear in the fact
-        for fact in table:
+        for fact_index in range(len(table)):
+            fact = table[fact_index]
+            importance = table_importance[fact_index]
             if list(fact.keys())[0] == 'event':
                 src_fact_verb = morphy(fact['event']['kind'].lower(), 'verb')
                 is_passive = 'passive' in fact['event']
@@ -1294,7 +1307,8 @@ def handle_subj_verb_obj(table, noun_modifiers, obj_counter, subj_verb_obj, noun
 
                         if subj_obj_found:
                             if is_passive == is_summ_passive:
-                                fact_count_to_add, summ_subj_modifiers_found = check_obj_modifiers(subj,
+                                fact_count_to_add, summ_subj_modifiers_found = check_obj_modifiers(fact_index, importance,
+                                                                                                   subj,
                                                                                                   found_summ_subj_val,
                                                                                                   found_summ_subj_pos,
                                                                                                   noun_modifiers,
@@ -1303,7 +1317,8 @@ def handle_subj_verb_obj(table, noun_modifiers, obj_counter, subj_verb_obj, noun
                                                                                                   embeddings_dict,
                                                                                                   threshold)
                             else:
-                                fact_count_to_add, summ_subj_modifiers_found = check_obj_modifiers(obj,
+                                fact_count_to_add, summ_subj_modifiers_found = check_obj_modifiers(fact_index, importance, 
+                                                                                                   obj,
                                                                                                   found_summ_subj_val,
                                                                                                   found_summ_subj_pos,
                                                                                                   noun_modifiers,
@@ -1315,11 +1330,12 @@ def handle_subj_verb_obj(table, noun_modifiers, obj_counter, subj_verb_obj, noun
 
                             if summ_subj_modifiers_found:
                                 if is_passive == is_summ_passive:
-                                    fact_count_to_add, summ_obj_modifiers_found = check_obj_modifiers(obj, found_summ_obj_val, found_summ_obj_pos, noun_modifiers, obj_counter, noun_neg,table,
+                                    fact_count_to_add, summ_obj_modifiers_found = check_obj_modifiers(fact_index, importance, obj, found_summ_obj_val, found_summ_obj_pos, noun_modifiers, obj_counter, noun_neg,table,
                                     embeddings_dict, threshold)
                                     pass
                                 else:
-                                    fact_count_to_add, summ_obj_modifiers_found = check_obj_modifiers(subj,
+                                    fact_count_to_add, summ_obj_modifiers_found = check_obj_modifiers(fact_index, importance,
+                                                                                                      subj,
                                                                                                       found_summ_obj_val,
                                                                                                       found_summ_obj_pos,
                                                                                                       noun_modifiers,
@@ -1330,15 +1346,17 @@ def handle_subj_verb_obj(table, noun_modifiers, obj_counter, subj_verb_obj, noun
                                 fact_count += fact_count_to_add
 
                                 if summ_obj_modifiers_found:
-                                    fact_count_to_add, summ_event_modifiers_found = check_event_modifiers(src_fact_verb, summ_fact_verb, event_modifiers, event_neg, table, embeddings_dict, threshold)
+                                    fact_count_to_add, summ_event_modifiers_found = check_event_modifiers(fact_index, importance, src_fact_verb, summ_fact_verb, event_modifiers, event_neg, table, embeddings_dict, threshold)
                                     fact_count += fact_count_to_add
 
                                     # subj verb obj found
                                     if summ_event_modifiers_found:
-                                        subj_obj_pairs[found_summ_subj_obj_pair_idx][1] = True
+                                        subj_obj_pairs[found_summ_subj_obj_pair_idx][1] = (True, importance)
                                         fact_count += 1
+                                        seen_facts.add(fact_index)
     return fact_count
 
+seen_facts = set()
 # TODO: add verb_obj!
 def count_matched_fact(table, table_importance, noun_modifiers, obj_counter, subj_verb, verb_obj, subj_verb_obj, noun_neg, event_neg,
                        event_modifiers, victim_map, embeddings_dict, noun_synsets, adj_synsets, adv_synsets,
@@ -1359,14 +1377,18 @@ def count_matched_fact(table, table_importance, noun_modifiers, obj_counter, sub
     :param synset_path_threshold: threshold to detect hypernym/hyponym path similarities
     :return:
     """
+    global seen_facts
+    seen_facts = set()
     fact_count = 0
     obj_mod_counting = False
     obj_counter_counting = False
 
     # subj_verb_obj
-    fact_count += handle_subj_verb_obj(table, noun_modifiers, obj_counter, subj_verb_obj, noun_neg, event_neg, event_modifiers, embeddings_dict, threshold)
+    fact_count += handle_subj_verb_obj(table, table_importance, noun_modifiers, obj_counter, subj_verb_obj, noun_neg, event_neg, event_modifiers, embeddings_dict, threshold)
 
-    for fact, importance in zip(table,table_importance):
+    for fact_index in range(len(table)):
+        fact = table[fact_index]
+        importance = table_importance[fact_index]
         # event
         # subj_verb, verb_obj, event_neg, event_modifiers
         if list(fact.keys())[0] == 'event':
@@ -1409,7 +1431,9 @@ def count_matched_fact(table, table_importance, noun_modifiers, obj_counter, sub
                                                               victim_map,
                                                               embeddings_dict, is_subj_verb=(noun_modifiers, obj_counter, noun_neg, table))
 
-                                fact_count_to_add, is_verb_checked = check_event_modifiers(fact_verb, verb.lower(),
+                                fact_count_to_add, is_verb_checked = check_event_modifiers(fact_index, importance,
+                                                                                           fact_verb,
+                                                                                           verb.lower(),
                                                                                            event_modifiers,
                                                                                            event_neg, table,
                                                                                            embeddings_dict,
@@ -1417,14 +1441,17 @@ def count_matched_fact(table, table_importance, noun_modifiers, obj_counter, sub
                                 fact_count += fact_count_to_add
                                 if matched_ored and is_verb_checked:
                                     fact_count += 1
-                                    subj[1] = True
+                                    subj[1] = (True, importance)
+                                    seen_facts.add(fact_index)
 
                             elif conj == 'and':
                                 fact_subj_list = split_obj(fact_subj)
-                                matched_anded = match_anded_obj(subj_val, fact_subj_list, subj_pos, threshold,
+                                matched_anded = match_anded_obj(fact_index, importance, subj_val, fact_subj_list, subj_pos, threshold,
                                                                 victim_map,
                                                                 embeddings_dict, is_subj_verb=(noun_modifiers, obj_counter, noun_neg, table))
-                                fact_count_to_add, is_verb_checked = check_event_modifiers(fact_verb, verb.lower(),
+                                fact_count_to_add, is_verb_checked = check_event_modifiers(fact_index, importance,
+                                                                                           fact_verb,
+                                                                                           verb.lower(),
                                                                                            event_modifiers,
                                                                                            event_neg, table,
                                                                                            embeddings_dict,
@@ -1433,7 +1460,8 @@ def count_matched_fact(table, table_importance, noun_modifiers, obj_counter, sub
 
                                 if matched_anded and is_verb_checked:
                                     fact_count += 1
-                                    subj[1] = True
+                                    subj[1] = (True, importance)
+                                    seen_facts.add(fact_index)
                             else:
                                 subj_name = remove_indices(subj_val)
 
@@ -1442,15 +1470,16 @@ def count_matched_fact(table, table_importance, noun_modifiers, obj_counter, sub
                                     fact_subj]) or is_similar(subj_name.lower(), fact_subj, subj[0][1], embeddings_dict,
                                                               threshold)):
 
-                                    fact_count_to_add, is_obj_checked = check_obj_modifiers(fact_subj, subj_name, subj[0][1], noun_modifiers, obj_counter, noun_neg, table, embeddings_dict, threshold)
+                                    fact_count_to_add, is_obj_checked = check_obj_modifiers(fact_index, importance, fact_subj, subj_name, subj[0][1], noun_modifiers, obj_counter, noun_neg, table, embeddings_dict, threshold)
                                     fact_count += fact_count_to_add
 
-                                    fact_count_to_add, is_verb_checked = check_event_modifiers(fact_verb, verb.lower(), event_modifiers, event_neg, table, embeddings_dict, threshold)
+                                    fact_count_to_add, is_verb_checked = check_event_modifiers(fact_index, importance, fact_verb, verb.lower(), event_modifiers, event_neg, table, embeddings_dict, threshold)
                                     fact_count += fact_count_to_add
 
                                     if is_obj_checked and is_verb_checked:
                                         fact_count += 1
-                                        subj[1] = True
+                                        subj[1] = (True, importance)
+                                        seen_facts.add(fact_index)
 
                                 # check if subj in ['woman', 'man', 'female', 'male'] that implicity contains sex attribute
                                 # If so, go through the facts in the table and see if the subj has sex attribute
@@ -1468,6 +1497,7 @@ def count_matched_fact(table, table_importance, noun_modifiers, obj_counter, sub
 
                                                 # check verb modifiers
                                                 fact_count_to_add, is_verb_checked = check_event_modifiers(
+                                                    fact_index, importance,
                                                     fact_verb, verb.lower(),
                                                     event_modifiers,
                                                     event_neg, table,
@@ -1477,7 +1507,8 @@ def count_matched_fact(table, table_importance, noun_modifiers, obj_counter, sub
 
                                                 if is_verb_checked:
                                                     fact_count += 1
-                                                    subj[1] = True
+                                                    subj[1] = (True, importance)
+                                                    seen_facts.add(fact_index)
 
             # verb_obj
             for verb, objs in verb_obj.items():
@@ -1500,6 +1531,7 @@ def count_matched_fact(table, table_importance, noun_modifiers, obj_counter, sub
                                                               embeddings_dict, is_subj_verb=(noun_modifiers, obj_counter, noun_neg, table))
 
                                 fact_count_to_add, is_verb_checked = check_event_modifiers(
+                                    fact_index, importance,
                                     fact_verb, verb.lower(),
                                     event_modifiers,
                                     event_neg, table,
@@ -1509,14 +1541,16 @@ def count_matched_fact(table, table_importance, noun_modifiers, obj_counter, sub
 
                                 if matched_ored and is_verb_checked:
                                     fact_count += 1
-                                    obj[1] = True
+                                    obj[1] = (True, importance)
+                                    seen_facts.add(fact_index)
 
                             elif conj == 'and':
                                 fact_obj_list = split_obj(fact_obj)
-                                matched_anded = match_anded_obj(obj_val, fact_obj_list, obj_pos, threshold, victim_map,
+                                matched_anded = match_anded_obj(fact_index, importance, obj_val, fact_obj_list, obj_pos, threshold, victim_map,
                                                                 embeddings_dict, is_subj_verb=(noun_modifiers, obj_counter, noun_neg, table))
 
                                 fact_count_to_add, is_verb_checked = check_event_modifiers(
+                                    fact_index, importance,
                                     fact_verb, verb.lower(),
                                     event_modifiers,
                                     event_neg, table,
@@ -1526,7 +1560,8 @@ def count_matched_fact(table, table_importance, noun_modifiers, obj_counter, sub
 
                                 if matched_anded and is_verb_checked:
                                     fact_count += 1
-                                    obj[1] = True
+                                    obj[1] = (True, importance)
+                                    seen_facts.add(fact_index)
                             else:
                                 obj_val = remove_indices(obj_val)
 
@@ -1538,12 +1573,13 @@ def count_matched_fact(table, table_importance, noun_modifiers, obj_counter, sub
                                                                                                                       table,
                                                                                                                       embeddings_dict,
                                                                                                                       threshold):
-                                    fact_count_to_add, is_obj_checked = check_obj_modifiers(fact_obj, obj_val, obj[0][1],
+                                    fact_count_to_add, is_obj_checked = check_obj_modifiers(fact, fact_obj, importance, obj_val, obj[0][1],
                                                                                       noun_modifiers, obj_counter, noun_neg,
                                                                                       table, embeddings_dict, threshold)
                                     fact_count += fact_count_to_add
 
-                                    fact_count_to_add, is_verb_checked = check_event_modifiers(fact_verb, verb.lower(),
+                                    fact_count_to_add, is_verb_checked = check_event_modifiers(fact_index, importance,
+                                                                                               fact_verb, verb.lower(),
                                                                                                event_modifiers,
                                                                                                event_neg, table,
                                                                                                embeddings_dict,
@@ -1552,7 +1588,8 @@ def count_matched_fact(table, table_importance, noun_modifiers, obj_counter, sub
 
                                     if is_obj_checked and is_verb_checked:
                                         fact_count += 1
-                                        obj[1] = True
+                                        obj[1] = (True, importance)
+                                        seen_facts.add(fact_index)
 
             # event_neg
             for verb, negs in event_neg.items():
@@ -1563,7 +1600,8 @@ def count_matched_fact(table, table_importance, noun_modifiers, obj_counter, sub
                     for neg in negs:
                         if not neg[1] and 'neg' in fact['event']:
                             fact_count += 1
-                            neg[1] = True
+                            neg[1] = (True, importance)
+                            seen_facts.add(fact_index)
                             break
 
             # event modifiers
@@ -1587,7 +1625,7 @@ def count_matched_fact(table, table_importance, noun_modifiers, obj_counter, sub
                     # an object has a list of phrase modifiers
                     if 'phrase_mod' in fact['event'] and type(fact['event']['phrase_mod']) == list:
                         # splitted_phrase_mods = split_connected_words(fact['event']['phrase_mod'], prepositions)
-                        fact_count += handle_modifiers(fact, 'event', verb, 'verb', modifiers, prepositions, threshold,
+                        fact_count += handle_modifiers(fact, importance, fact_index, 'event', verb, 'verb', modifiers, prepositions, threshold,
                                                        table, embeddings_dict, only_phrase_mod=True)
                         include_phrase_mod = True
 
@@ -1615,13 +1653,14 @@ def count_matched_fact(table, table_importance, noun_modifiers, obj_counter, sub
 
                                 if is_same:
                                     fact_count += 1
-                                    mod[1] = True
+                                    mod[1] = (True, importance)
+                                    seen_facts.add(fact_index)
 
                         else:
                             # filter attributes based on the word's part of speech tag
                             attrs = filter_attrs(mod[0][1], fact, 'event', include_phrase_mod)
                             attrs = split_connected_words(attrs, prepositions)
-                            fact_count += handle_modifiers_helper(mod, attrs, prepositions, embeddings_dict, threshold)
+                            fact_count += handle_modifiers_helper(fact_index, importance, mod, attrs, prepositions, embeddings_dict, threshold)
 
 
         # TODO: add modifier if it's used in the future
@@ -1652,7 +1691,7 @@ def count_matched_fact(table, table_importance, noun_modifiers, obj_counter, sub
                     # an object has a list of phrase modifiers
                     if 'phrase_mod' in fact['object'] and type(fact['object']['phrase_mod']) == list:
                         # splitted_phrase_mods = split_connected_words(fact['object']['phrase_mod'], prepositions)
-                        fact_count += handle_modifiers(fact, 'object', noun, 'noun', modifiers, prepositions, threshold,
+                        fact_count += handle_modifiers(fact, importance, fact_index, 'object', noun, 'noun', modifiers, prepositions, threshold,
                                                        table, embeddings_dict, only_phrase_mod=True)
                         include_phrase_mod = True
                     #   attrs = set(fact['object'][key] for key in fact['object'] if key != 'phrase_mod' and key != 'kind')
@@ -1661,7 +1700,7 @@ def count_matched_fact(table, table_importance, noun_modifiers, obj_counter, sub
 
                     # attrs = split_connected_words(attrs, prepositions)
 
-                    fact_count += handle_modifiers(fact, 'object', noun, 'noun', modifiers, prepositions, threshold,
+                    fact_count += handle_modifiers(fact, importance, fact_index, 'object', noun, 'noun', modifiers, prepositions, threshold,
                                                    table, embeddings_dict, include_phrase_mod=include_phrase_mod)
 
                 #  noun.lower() == 'men': to handle case when men is used as a general term
@@ -1673,7 +1712,7 @@ def count_matched_fact(table, table_importance, noun_modifiers, obj_counter, sub
                     # a person has a list of phrase modifiers
                     if 'phrase_mod' in fact['person'] and type(fact['person']['phrase_mod']) == list:
                         # splitted_phrase_mods = split_connected_words(fact['person']['phrase_mod'], prepositions)
-                        fact_count += handle_modifiers(fact, 'person', noun, 'noun', modifiers, prepositions, threshold,
+                        fact_count += handle_modifiers(fact, importance, fact_index, 'person', noun, 'noun', modifiers, prepositions, threshold,
                                                        table, embeddings_dict, only_phrase_mod=True)
                         include_phrase_mod = True
                         # attrs = set(fact['person'][key] for key in fact['person'] if key != 'phrase_mod' and key != 'kind')
@@ -1682,7 +1721,7 @@ def count_matched_fact(table, table_importance, noun_modifiers, obj_counter, sub
 
                     # attrs = split_connected_words(attrs, prepositions)
                     # print(noun, modifiers)
-                    fact_count += handle_modifiers(fact, 'person', noun, 'noun', modifiers, prepositions, threshold,
+                    fact_count += handle_modifiers(fact, importance, fact_index, 'person', noun, 'noun', modifiers, prepositions, threshold,
                                                    table, embeddings_dict, include_phrase_mod=include_phrase_mod)
 
 
@@ -1704,8 +1743,9 @@ def count_matched_fact(table, table_importance, noun_modifiers, obj_counter, sub
                     if len(counts) and 'person' in fact and 'count' in fact['person']:
                         for count in counts:
                             if not count[1] and count[0][0].lower() == fact['person']['count'].lower():
-                                count[1] = True
+                                count[1] = (True, importance)
                                 fact_count += 1
+                                seen_facts.add(fact_index)
                                 break
 
                 if 'object' in fact and (obj.lower() == fact['object']['kind'].lower() or (
@@ -1716,7 +1756,8 @@ def count_matched_fact(table, table_importance, noun_modifiers, obj_counter, sub
                     for counter in counters:
                         if not counter[1] and 'count' in fact['object'] and fact['object']['count'].lower() == counter[0][0]:
                             fact_count += 1
-                            counter[1] = True
+                            counter[1] = (True, importance)
+                            seen_facts.add(fact_index)
                             break
 
                 elif 'person' in fact and (obj.lower() == fact['person']['kind'].lower() or (
@@ -1727,7 +1768,8 @@ def count_matched_fact(table, table_importance, noun_modifiers, obj_counter, sub
                     for counter in counters:
                         if not counter[1] and 'count' in fact['person'] and fact['person']['count'].lower() == counter[0][0]:
                             fact_count += 1
-                            counter[1] = True
+                            counter[1] = (True, importance)
+                            seen_facts.add(fact_index)
                             break
             obj_counter_counting = True
 
@@ -1743,7 +1785,8 @@ def count_matched_fact(table, table_importance, noun_modifiers, obj_counter, sub
                     for neg in negs:
                         if not neg[1] and 'neg' in fact['object']:
                             fact_count += 1
-                            neg[1] = True
+                            neg[1] = (True, importance)
+                            seen_facts.add(fact_index)
                             break
 
                 elif 'person' in fact and (noun.lower() == fact['person']['kind'].lower() or (
@@ -1754,7 +1797,8 @@ def count_matched_fact(table, table_importance, noun_modifiers, obj_counter, sub
                     for neg in negs:
                         if not neg[1] and 'neg' in fact['person']:
                             fact_count += 1
-                            neg[1] = True
+                            neg[1] = (True, importance)
+                            seen_facts.add(fact_index)
                             break
 
     print()
@@ -1769,4 +1813,4 @@ def count_matched_fact(table, table_importance, noun_modifiers, obj_counter, sub
     print(start + "Noun negation: " + end, noun_neg)
     print(start + "Event negation: " + end, event_neg)
     print(start + "Event modifiers: " + end, event_modifiers)
-    return fact_count
+    return fact_count, seen_facts

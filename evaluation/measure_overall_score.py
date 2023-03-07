@@ -54,10 +54,19 @@ def measure_overall_quality_score(summary, source, table, nlp, configs):
     table_importance = get_fact_importance_table(table)
     # for fact, score in zip(table, table_importance):
     #     print(score, fact)
-    fact_count = count_matched_fact(table, table_importance, noun_modifiers, obj_counter, subj_verb, verb_obj, subj_verb_obj, noun_neg,
+    fact_count, seen_facts = count_matched_fact(table, table_importance, noun_modifiers, obj_counter, subj_verb, verb_obj, subj_verb_obj, noun_neg,
                                     event_neg, event_modifiers, victim_map, embeddings_dict, noun_synsets, adj_synsets,
                                     adv_synsets, verb_synsets, threshold)
-
+    print('seen facts')
+    print(seen_facts)
+    for fact_index in seen_facts:
+        print(table_importance[fact_index], table[fact_index])
+    unseen_facts = set(range(len(table))) - seen_facts
+    print('unseen important facts')
+    # print(unseen_facts)
+    for fact_index in unseen_facts:
+        if table_importance[fact_index] > 0.5:
+            print(table_importance[fact_index], table[fact_index])
     compression_rate = measure_compression_rate(summary, source)
     comprehensiveness = measure_comprehensiveness(table, fact_count)
     factual_consistency = measure_factual_consistency(noun_modifiers, obj_counter, subj_verb, verb_obj, subj_verb_obj,

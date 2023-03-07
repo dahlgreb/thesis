@@ -97,7 +97,7 @@ def get_consistent_facts(extracted_facts):
 
 
 def clean_attrs(attrs):
-    if type(attrs[-1]) == bool:
+    if type(attrs[-1]) == bool or (type(attrs[-1]) == tuple and type(attrs[-1][0]) == bool):
         return clean_attrs(attrs[:-1])
     if type(attrs) == list:
         if type(attrs[0])==list:
@@ -123,8 +123,13 @@ def clean_facts(facts):
             # print(facts[fact])
             cleaned_subj = fact.split('_')[0]
             for attrs in facts[fact]:
-                for attr in attrs[:-1]:
-                    cleaned.append(f'{cleaned_subj} {" ".join([attr[0].split("_")[0]])}')
+                cleaned.append(f'{cleaned_subj} {clean_attrs(attrs)}')
+                # for attr in attrs[:-1]:
+                #     try:
+                        
+                #     except:
+                #         print(fact, facts[fact], attr)
+                #         exit()
                 consistent.append(attrs[-1])
     return cleaned, consistent
 
@@ -133,6 +138,9 @@ def measure_factual_consistency(noun_modifiers, obj_counter, subj_verb, verb_obj
                                 event_modifiers):
     extracted_facts = combine_extracted_facts(noun_modifiers, obj_counter, subj_verb, verb_obj, subj_verb_obj, noun_neg,
                                               event_neg, event_modifiers)
+    
+    print('extracted facts')
+    print(extracted_facts)
 
     simple_model = pickle.load(open('fact_lin_reg_masked.pkl', 'rb'))
     bert_model = SentenceTransformer('all-MiniLM-L6-v2')
@@ -144,9 +152,9 @@ def measure_factual_consistency(noun_modifiers, obj_counter, subj_verb, verb_obj
     consistent_scores = []
     for score, is_consistent in zip(facts_importances, consistent):
             if is_consistent:
-                consistent_scores.append(score)
+                consistent_scores.append((score,is_consistent))
             else:
-                inconsistent_scores.append(score)
+                inconsistent_scores.append((score,is_consistent))
     inconsistent_facts = get_inconsistent_facts(extracted_facts)
 
     if inconsistent_facts:

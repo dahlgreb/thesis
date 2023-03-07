@@ -357,7 +357,7 @@ chatgpt_3 = '''A Chinese tourist has been sentenced to 10 years in prison for th
 chat_gpt_3_2 = '''A Chinese tourist has been sentenced to 10 years in prison for shooting and killing an Egyptian soldier during a nightclub brawl in Gaza. The incident took place during a fight between the soldier and two Chinese tourists, with the police still trying to determine the circumstances leading up to the shooting and asking for public cooperation in their investigation.'''
 
 # summaries = [chatgpt_3, chat_gpt_3_2, pega_3, bart_3, t5_3]
-summaries = [t5_3]
+summaries = [chatgpt_3]
 # 'threshold for word sense disambiguation to check \
 #                               if an attribute/object is appeared as a verb/noun in a fact in the output summary.'
 if __name__ == '__main__':
