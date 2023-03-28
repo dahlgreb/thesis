@@ -9,6 +9,9 @@ from analyzer.wordnet_synsets.wordnet_synsets import load_synsets
 from evaluation.fact_importance.score_fact_importance import get_fact_importance_table
 # from evaluation.token_importance import *
 # from evaluation.token_importance.evaluate import measure_token_importance
+import pickle
+from sentence_transformers import SentenceTransformer
+from sklearn.linear_model import LinearRegression
 
 
 def load_embeddings(pretrained_embeddings_path):
@@ -47,11 +50,14 @@ def measure_overall_quality_score(summary, source, table, nlp, configs):
     embeddings_dict = load_embeddings(pretrained_embeddings_path)
     noun_synsets, adj_synsets, adv_synsets, verb_synsets = load_synsets()
 
+    simple_model = pickle.load(open('fact_lin_reg_masked.pkl', 'rb'))
+    bert_model = SentenceTransformer('all-MiniLM-L6-v2')
+
     noun_modifiers, obj_counter, subj_verb, verb_obj, subj_verb_obj, noun_neg, event_neg, event_modifiers = extract_facts_from_summary(
         summary, nlp)
 
     victim_map = victim_maps[grammar_type]
-    table_importance = get_fact_importance_table(table)
+    table_importance = get_fact_importance_table(table,nlp, simple_model, bert_model)
     # for fact, score in zip(table, table_importance):
     #     print(score, fact)
     fact_count, seen_facts = count_matched_fact(table, table_importance, noun_modifiers, obj_counter, subj_verb, verb_obj, subj_verb_obj, noun_neg,
@@ -59,25 +65,34 @@ def measure_overall_quality_score(summary, source, table, nlp, configs):
                                     adv_synsets, verb_synsets, threshold)
     print('seen facts')
     print(seen_facts)
+    retrieved_important = 0
     for fact_index in seen_facts:
         print(table_importance[fact_index], table[fact_index])
+        if table_importance[fact_index] > 0.51:
+            retrieved_important += table_importance[fact_index]
     unseen_facts = set(range(len(table))) - seen_facts
     print('unseen important facts')
     # print(unseen_facts)
     for fact_index in unseen_facts:
-        if table_importance[fact_index] > 0.5:
+        if table_importance[fact_index] > 0.51:
             print(table_importance[fact_index], table[fact_index])
+    # retrieved important / all important
+    all_important = 0
+    for fact_imp in table_importance:
+        if fact_imp > 0.51:
+            all_important += fact_imp
+    importance_recall = retrieved_important/all_important
     compression_rate = measure_compression_rate(summary, source)
     comprehensiveness = measure_comprehensiveness(table, fact_count)
     factual_consistency = measure_factual_consistency(noun_modifiers, obj_counter, subj_verb, verb_obj, subj_verb_obj,
                                                       noun_neg,
-                                                      event_neg, event_modifiers)
+                                                      event_neg, event_modifiers, simple_model, bert_model)
 
     # token_importance_score = measure_token_importance(summary)
     print(f'Factual consistency score: {factual_consistency}')
     print(f'Comprehensiveness score: {comprehensiveness}')
     print(f'Compression rate: {compression_rate}')
-    # print(f'Token Importance: {token_importance_score}')
+    print(f'Fact importance recall: {importance_recall}')
 
     cp = np.exp(tau - compression_rate) if tau - compression_rate < 0 else 1
 

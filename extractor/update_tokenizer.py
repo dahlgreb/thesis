@@ -116,48 +116,53 @@ def combine_connected_words(doc):
 
 # combine noun compounds to a single token
 def update_tokenizer(doc):
-    compounds, compounds_indices = get_compounds(doc)
-    assert len(compounds) == len(compounds_indices)
+    done = False
+    while not done:
+        compounds, compounds_indices = get_compounds(doc)
+        assert len(compounds) == len(compounds_indices)
 
-    age_indices = combine_age(doc)
-    time_indices = combine_times(doc)
-    verb_indices = combine_verb_prt(doc)
-    npadvmod_indices = combine_npadvmod(doc)
-    prep_indices = combine_prep(doc)
-    count_mod_indices = combine_count_mod(doc)
-    connected_words_indices = combine_connected_words(doc)
+        age_indices = combine_age(doc)
+        time_indices = combine_times(doc)
+        verb_indices = combine_verb_prt(doc)
+        npadvmod_indices = combine_npadvmod(doc)
+        prep_indices = combine_prep(doc)
+        count_mod_indices = combine_count_mod(doc)
+        connected_words_indices = combine_connected_words(doc)
 
-    with doc.retokenize() as retokenizer:
-        for i in range(len(compounds)):
-            compound = compounds[i]
-            retokenizer.merge(doc[compounds_indices[i][0]: compounds_indices[i][1] + 1],
-                              attrs={"LEMMA": compound.text.lower()})
-
-        for i in range(len(age_indices)):
-            age = doc[age_indices[i][0]: age_indices[i][1] + 1]
-            retokenizer.merge(age, attrs={"LEMMA": age.text.lower()})
-
-        for i in range(len(time_indices)):
-            time = doc[time_indices[i][0]: time_indices[i][1] + 1]
-            retokenizer.merge(time, attrs={"LEMMA": time.text.lower()})
-
-        for i in range(len(verb_indices)):
-            verb = doc[verb_indices[i][0]: verb_indices[i][1] + 1]
-            retokenizer.merge(verb, attrs={"LEMMA": verb.text.lower()})
-
-        for i in range(len(npadvmod_indices)):
-            npadvmod = doc[npadvmod_indices[i][0]: npadvmod_indices[i][1] + 1]
-            retokenizer.merge(npadvmod, attrs={"LEMMA": npadvmod.text.lower()})
-
-        for i in range(len(prep_indices)):
-            prep = doc[prep_indices[i][0]: prep_indices[i][1] + 1]
-            retokenizer.merge(prep, attrs={"LEMMA": prep.text.lower()})
-
-        for i in range(len(count_mod_indices)):
-            count_mod = doc[count_mod_indices[i][0]: count_mod_indices[i][1] + 1]
-            retokenizer.merge(count_mod, attrs={"LEMMA": count_mod.text.lower()})
-
-        for i in range(len(connected_words_indices)):
-            connected_word = doc[connected_words_indices[i][0]: connected_words_indices[i][1] + 1]
-            retokenizer.merge(connected_word, attrs={"LEMMA": connected_word.text.lower()})
+        with doc.retokenize() as retokenizer:
+            if compounds:
+                for i in range(len(compounds)):
+                    compound = compounds[i]
+                    retokenizer.merge(doc[compounds_indices[i][0]: compounds_indices[i][1] + 1],
+                                    attrs={"LEMMA": compound.text.lower()})
+            elif age_indices:
+                for i in range(len(age_indices)):
+                    age = doc[age_indices[i][0]: age_indices[i][1] + 1]
+                    retokenizer.merge(age, attrs={"LEMMA": age.text.lower()})
+            elif time_indices:
+                for i in range(len(time_indices)):
+                    time = doc[time_indices[i][0]: time_indices[i][1] + 1]
+                    retokenizer.merge(time, attrs={"LEMMA": time.text.lower()})
+            elif verb_indices:
+                for i in range(len(verb_indices)):
+                    verb = doc[verb_indices[i][0]: verb_indices[i][1] + 1]
+                    retokenizer.merge(verb, attrs={"LEMMA": verb.text.lower()})
+            elif npadvmod_indices:
+                for i in range(len(npadvmod_indices)):
+                    npadvmod = doc[npadvmod_indices[i][0]: npadvmod_indices[i][1] + 1]
+                    retokenizer.merge(npadvmod, attrs={"LEMMA": npadvmod.text.lower()})
+            elif prep_indices:
+                for i in range(len(prep_indices)):
+                    prep = doc[prep_indices[i][0]: prep_indices[i][1] + 1]
+                    retokenizer.merge(prep, attrs={"LEMMA": prep.text.lower()})
+            elif count_mod_indices:
+                for i in range(len(count_mod_indices)):
+                    count_mod = doc[count_mod_indices[i][0]: count_mod_indices[i][1] + 1]
+                    retokenizer.merge(count_mod, attrs={"LEMMA": count_mod.text.lower()})
+            elif connected_words_indices:
+                for i in range(len(connected_words_indices)):
+                    connected_word = doc[connected_words_indices[i][0]: connected_words_indices[i][1] + 1]
+                    retokenizer.merge(connected_word, attrs={"LEMMA": connected_word.text.lower()})
+            else:
+                done = True
     return doc

@@ -1237,6 +1237,9 @@ def check_event_modifiers(fact_index, importance, src_fact_verb, summ_fact_verb,
                 seen_facts.add(fact_index)
             else:
                 summ_event_modifiers_found = False
+        elif type(summ_event_modifier_val) == bool:
+            print(summ_event_modifier)
+            pass
         else:
             # check if summ_event_modifier_val has preposition
             if any(prep in summ_event_modifier_val for prep in prepositions):
@@ -1723,6 +1726,13 @@ def count_matched_fact(table, table_importance, noun_modifiers, obj_counter, sub
                     # print(noun, modifiers)
                     fact_count += handle_modifiers(fact, importance, fact_index, 'person', noun, 'noun', modifiers, prepositions, threshold,
                                                    table, embeddings_dict, include_phrase_mod=include_phrase_mod)
+                elif 'object' in fact and 'obj_mod' in fact['object'] and noun.lower() == fact['object']['obj_mod'].lower():
+                    for mod in modifiers:
+                        if fact['object']['location'].lower() in mod[0][0].lower():
+                            fact_count += 1
+                            mod[1] = (True, importance)
+                            seen_facts.add(fact_index)
+
 
 
             obj_mod_counting = True

@@ -1,7 +1,3 @@
-import pickle
-from sentence_transformers import SentenceTransformer
-from sklearn.linear_model import LinearRegression
-
 def clean_attrs(attrs):
     if type(attrs[-1]) == bool:
         return clean_attrs(attrs[:-1])
@@ -38,33 +34,56 @@ def clean_extracted_facts(facts):
 def clean_fact_table(table):
     cleaned_facts = []
     for fact in table:
-        fact_type = list(fact)[0]
-        cleaned_fact = []
-        if fact_type == 'event':
-            for attr in fact[fact_type]:
-                if attr not in ['passive', 'neg', 'phrase_mod']:
-                    cleaned_fact.append(fact[fact_type][attr])
-                elif attr == 'neg':
-                    cleaned_fact.append('no')
-                elif attr == 'phrase_mod':
-                    if type(fact[fact_type][attr]) == list:
-                        cleaned_fact.append(' '.join(fact[fact_type][attr]))
-                    else:
+        try:
+            fact_type = list(fact)[0]
+            cleaned_fact = []
+            if fact_type == 'event':
+                for attr in fact[fact_type]:
+                    if attr not in ['passive', 'neg', 'phrase_mod']:
                         cleaned_fact.append(fact[fact_type][attr])
-        else:
-            for attr in fact[fact_type]:
-                cleaned_fact.append(fact[fact_type][attr])
-        cleaned_facts.append(' '.join(cleaned_fact))
+                    elif attr == 'neg':
+                        cleaned_fact.append('no')
+                    elif attr == 'phrase_mod':
+                        if type(fact[fact_type][attr]) == list:
+                            cleaned_fact.append(' '.join(fact[fact_type][attr]))
+                        else:
+                            cleaned_fact.append(fact[fact_type][attr])
+            else:
+                for attr in reversed(fact[fact_type]):
+                    if attr == 'nationality':
+                        continue
+                    elif attr == 'neg':
+                        cleaned_fact.append('no')
+                    elif attr != 'phrase_mod':
+                        cleaned_fact.append(fact[fact_type][attr])
+                if 'phrase_mod' in fact[fact_type]:
+                    cleaned_fact.append(fact[fact_type]['phrase_mod'])
+            cleaned_facts.append(' '.join(cleaned_fact))
+        except Exception as e:
+            print(fact)
+            print(e)
+            exit()
     return cleaned_facts
 
-            
 
-simple_model = pickle.load(open('fact_lin_reg_masked.pkl', 'rb'))
-bert_model = SentenceTransformer('all-MiniLM-L6-v2')
+def mask_table_facts(cleaned_facts,nlp):
+    masked_facts = []
+    tok_facts = [nlp(fact) for fact in cleaned_facts]
+    for toks in tok_facts:
+        masked_fact = []
+        for tok in toks:
+            if tok.pos_ in ['PROPN','NUM']:
+                masked_fact.append(tok.pos_)
+            else:
+                masked_fact.append(tok.text)
+        masked_facts.append(' '.join(masked_fact))
+    return masked_facts
 
-def get_fact_importance_table(fact_table):
+
+def get_fact_importance_table(fact_table, nlp, simple_model, bert_model):
     cleaned_facts = clean_fact_table(fact_table)
-    scores = simple_model.predict(bert_model.encode(cleaned_facts))
-    for fact, score in zip(cleaned_facts, scores):
+    masked_cleaned_facts = mask_table_facts(cleaned_facts, nlp)
+    scores = simple_model.predict(bert_model.encode(masked_cleaned_facts))
+    for fact, score in zip(masked_cleaned_facts, scores):
         print(score, fact)
     return scores

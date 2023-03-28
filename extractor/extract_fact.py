@@ -1,10 +1,76 @@
+import numpy as np
+from numpy.linalg import norm
 import spacy
 import re
 import nltk
 from nltk.corpus import wordnet as wn
+from sentence_transformers import SentenceTransformer
 
 from extractor.update_tokenizer import update_tokenizer
 from utils import morphy, be_verbs, months, list_of_places, prepositions, wh_words
+
+
+bert_model = SentenceTransformer('all-MiniLM-L6-v2')
+
+def cosine_similarity(a, b):
+    return np.dot(a,b)/(norm(a,axis=1)*norm(b))
+
+
+def get_text_data(syns):
+    text = []
+    for syn in syns:
+        text.append(syn.definition() + ' ' + ' '.join([' '.join(hyp.lemma_names()) for hyp in syn.hypernyms()]))
+    return text
+
+
+def match_synset(token, sent_embedding):
+    syns=[]
+    hyp_path = ''
+    word = str(token).lower()
+    if token.pos_ == 'PROPN' or token.pos_ == 'NOUN':
+        syns.extend(wn.synsets(word, pos=wn.NOUN))
+    if token.pos_ == 'VERB':
+        syns.extend(wn.synsets(word, pos=wn.VERB))
+    if len(syns)>0:
+        defs = get_text_data(syns)
+        syn_embeddings = bert_model.encode(defs)
+        cosims = cosine_similarity(syn_embeddings, sent_embedding)
+        pred_syn = syns[cosims.argmax()]
+        # hyp_path = pred_syn.hypernym_paths()[0]
+        # cleaned_path = [s.name() for s in hyp_path]
+        return pred_syn, cosims.max()
+    else:
+        return None, None
+
+
+# How much does the sematic meaning change when the candidate is applied
+# change from subj vs change from orig sent
+def sensifier(candidates, subj, context):
+    print(candidates, subj)
+    sent_embedding = bert_model.encode(context)
+    subj_text_expanded = ""
+    for tok in subj:
+        pred_syn, cosim_score = match_synset(tok, sent_embedding)
+        if pred_syn:
+            subj_text_expanded += f'{tok.text}'# {pred_syn.definition()} '
+        else:
+            subj_text_expanded += f' {tok.text} '
+    candidate_embeddings = []
+    for candidate in candidates:
+        candidate_text_expanded = ""
+        for tok in candidate:
+            pred_syn, cosim_score = match_synset(tok, sent_embedding)
+            if pred_syn:
+                candidate_text_expanded += f'{tok.text} {pred_syn.definition()} '
+            else:
+                candidate_text_expanded += f' {tok.text} '
+        print(f'{candidate_text_expanded} {subj_text_expanded}')
+        candidate_embeddings.append(bert_model.encode(f'{candidate_text_expanded} {subj_text_expanded}'))
+    cosims = cosine_similarity(candidate_embeddings,
+                               sent_embedding)
+                                    # bert_model.encode(subj_text_expanded))
+    print(cosims)
+    return np.argmax(cosims)
 
 
 def preprocess_summary(summary: str):
@@ -556,86 +622,112 @@ def extract_facts_from_summary(summary, nlp):
 
             # location, place, time, ... modifiers
             else:
-                # noun phrase modifier
-                if tok.head.head.pos_ == 'NOUN':
-                    noun = tok.head.head.text
-                    noun = morphy(noun, tok.head.head.pos_) + '_' + str(tok.head.head.i)
-                    # phrase_mod = tok.head.text + ' ' + tok.text
+                rerun = True
+                tok_head_head = tok.head.head
+                while rerun:
+                    rerun = False
+                    # noun phrase modifier
+                    if tok_head_head.pos_ == 'NOUN':
+                        noun = tok_head_head.text
+                        noun = morphy(noun, tok_head_head.pos_) + '_' + str(tok_head_head.i)
+                        # phrase_mod = tok.head.text + ' ' + tok.text
 
-                    # if tok.text is a place, then ignore prep
-                    if tok.text in list_of_places:
-                        phrase_mod = tok.text
-                    else:
-                        prep = tok.head.text
-                        phrase_mod = prep + ' ' + tok.text
-
-                    if noun in noun_modifiers:
-                        noun_modifiers[noun].append([[phrase_mod, tok.pos_], False])
-                    else:
-                        noun_modifiers[noun] = [[[phrase_mod, tok.pos_], False]]
-                # verb phrase modifier
-                elif tok.head.head.pos_ == 'VERB':
-                    # ?? Check possible case for this?
-                    if tok.head.head.dep_ == 'prep':
-                        preposition = tok.head.head.text + ' ' + preposition.text
-
-                        phrase_mod = preposition + ' ' + tok.text
-                        verb = tok.head.head.head.text
-                        verb_stem = morphy(verb, tok.head.head.head.pos_) + '_' + str(tok.head.head.head.i)
-                        if verb_stem in subj_verb:
-                            subj = subj_verb[verb_stem][-1][0][0]
+                        # if tok.text is a place, then ignore prep
+                        if tok.text in list_of_places:
+                            phrase_mod = tok.text
                         else:
-                            print('verb not found in subj verb relation')
-                            print(verb_stem)
-                            print(subj_verb)
-                            for k in subj_verb:
-                                if verb_stem.split('_')[0] in k:
-                                    subj = k[-1][0][0]
-                                else:
-                                    continue
-                        if subj in noun_modifiers:
-                            noun_modifiers[subj].append([[phrase_mod, tok.pos_], False])
+                            prep = tok.head.text
+                            phrase_mod = prep + ' ' + tok.text
+
+                        if noun in noun_modifiers:
+                            noun_modifiers[noun].append([[phrase_mod, tok.pos_], False])
                         else:
-                            noun_modifiers[subj] = [[[phrase_mod, tok.pos_], False]]
+                            noun_modifiers[noun] = [[[phrase_mod, tok.pos_], False]]
+                    # verb phrase modifier
+                    elif tok_head_head.pos_ == 'VERB':
+                        # ?? Check possible case for this?
+                        # print('hi')
+                        # print(tok.head.head, tok.head.head.dep_, tok.head.head.head.text)
+                        if tok_head_head.dep_ == 'prep':
+                            preposition = tok_head_head.text + ' ' + preposition.text
 
-                    # verbs are conjugated - killed and injured in the shooting
-                    elif tok.head.head.dep_ == 'conj':
-                        phrase_mod = preposition.text + ' ' + tok.text
-
-                        verb = tok.head.head.text
-                        other_verb = tok.head.head.head.text
-
-                        verb_morph = morphy(verb, tok.head.head.pos_) + '_' + str(tok.head.head.i)
-                        other_verb_morph = morphy(other_verb, tok.head.head.head.pos_) + '_' + str(tok.head.head.head.i)
-
-                        if verb_morph in event_modifiers:
-                            event_modifiers[verb_morph].append([[phrase_mod, tok.pos_], False])
-                        else:
-                            event_modifiers[verb_morph] = [[[phrase_mod, tok.pos_], False]]
-
-                        if other_verb_morph in event_modifiers:
-                            event_modifiers[other_verb_morph].append([[phrase_mod, tok.pos_], False])
-                        else:
-                            event_modifiers[other_verb_morph] = [[[phrase_mod, tok.pos_], False]]
-
-                    else:
-                        verb = tok.head.head.text
-                        verb_stem = morphy(verb, tok.head.head.pos_) + '_' + str(tok.head.head.i)
-
-                        if preposition.text.lower() == 'as':
-                            # get subj
-                            subj = subj_verb[verb_stem][-1][0][0]
+                            phrase_mod = preposition + ' ' + tok.text
+                            verb = tok_head_head.head.text
+                            verb_stem = morphy(verb, tok_head_head.head.pos_) + '_' + str(tok_head_head.head.i)
+                            if verb_stem in subj_verb:
+                                subj = subj_verb[verb_stem][-1][0][0]
+                            else:
+                                print('verb not found in subj verb relation')
+                                print(verb_stem)
+                                print(subj_verb)
+                                for k in subj_verb:
+                                    if verb_stem.split('_')[0] in k:
+                                        subj = k[-1][0][0]
+                                    else:
+                                        continue
                             if subj in noun_modifiers:
-                                noun_modifiers[subj].append([[tok.text, tok.pos_], False])
+                                noun_modifiers[subj].append([[phrase_mod, tok.pos_], False])
                             else:
-                                noun_modifiers[subj] = [[[tok.text, tok.pos_], False]]
+                                noun_modifiers[subj] = [[[phrase_mod, tok.pos_], False]]
+
+                        # verbs are conjugated - killed and injured in the shooting
+                        elif tok_head_head.dep_ == 'conj':
+                            phrase_mod = preposition.text + ' ' + tok.text
+
+                            verb = tok_head_head.text
+                            other_verb = tok_head_head.head.text
+
+                            verb_morph = morphy(verb, tok_head_head.pos_) + '_' + str(tok_head_head.i)
+                            other_verb_morph = morphy(other_verb, tok_head_head.head.pos_) + '_' + str(tok_head_head.head.i)
+
+                            if verb_morph in event_modifiers:
+                                event_modifiers[verb_morph].append([[phrase_mod, tok.pos_], False])
+                            else:
+                                event_modifiers[verb_morph] = [[[phrase_mod, tok.pos_], False]]
+
+                            if other_verb_morph in event_modifiers:
+                                event_modifiers[other_verb_morph].append([[phrase_mod, tok.pos_], False])
+                            else:
+                                event_modifiers[other_verb_morph] = [[[phrase_mod, tok.pos_], False]]
 
                         else:
-                            phrase_mod = preposition.text + ' ' + tok.text
-                            if verb_stem in event_modifiers:
-                                event_modifiers[verb_stem].append([[phrase_mod, tok.pos_], False])
+                            verb = tok_head_head.text
+                            print(f'Testing phrase: {tok_head_head.text} {tok.head.text} {tok.text}')
+                            candidates = [[tok_head_head]]
+                            context = doc.text
+                            for child in tok_head_head.children:
+                                if tok not in child.children:
+                                    if child.dep_ == 'prep':
+                                        candidates.append([[childer for childer in child.children][0]])
+                                else:
+                                    break
+                            # print(candidates)
+                            if len(candidates) > 1:
+                                sense_choice = sensifier(candidates, [tok.head, tok], context)
+                                print(f'{candidates[sense_choice]} makes sense')
                             else:
-                                event_modifiers[verb_stem] = [[[phrase_mod, tok.pos_], False]]
+                                sense_choice = 0
+                            if sense_choice != 0:
+                                print(f'{candidates[0]} does not make sense')
+                                tok_head_head = candidates[sense_choice][0]
+                                rerun = True
+                                continue
+                            verb_stem = morphy(verb, tok_head_head.pos_) + '_' + str(tok_head_head.i)
+
+                            if preposition.text.lower() == 'as':
+                                # get subj
+                                subj = subj_verb[verb_stem][-1][0][0]
+                                if subj in noun_modifiers:
+                                    noun_modifiers[subj].append([[tok.text, tok.pos_], False])
+                                else:
+                                    noun_modifiers[subj] = [[[tok.text, tok.pos_], False]]
+
+                            else:
+                                phrase_mod = preposition.text + ' ' + tok.text
+                                if verb_stem in event_modifiers:
+                                    event_modifiers[verb_stem].append([[phrase_mod, tok.pos_], False])
+                                else:
+                                    event_modifiers[verb_stem] = [[[phrase_mod, tok.pos_], False]]
 
         # adverbial clause modifier (advcl)
         elif tok.dep_ == 'advcl' and tok.pos_ == 'VERB':
@@ -784,7 +876,7 @@ def extract_facts_from_summary(summary, nlp):
         elif tok.dep_ == 'neg' and 'V' in tok.head.tag_:
             verb = tok.head.text
             verb_stem = morphy(verb, tok.head.pos_) + '_' + str(tok.head.i)
-            if verb_stem in verb_stem:
+            if verb_stem in event_neg:
                 event_neg[verb_stem].append([[True, tok.pos_], False])
             else:
                 event_neg[verb_stem] = [[[True, tok.pos_], False]]

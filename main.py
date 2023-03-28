@@ -332,10 +332,93 @@ fact_table_3 = [
 {'event': {'subj': 'anyone', 'passive': True, 'kind': 'asked', 'phrase_mod': 'to contact'}}
 ]
 
+article_4 = '''A 55 years old female victim got knifed by three men at a New York inspired bar in America at 9 p.m. on Monday.
+
+The arrest came after police responded Tuesday to a report of the stab at the New York inspired bar.
+
+The first man was described as about 20 years old, wearing a green jacket with a pink collar and cuffs, with skinny jeans and casual shoes. The second man was described as about 43 years old, wearing a bright jacket with a blue collar and cuffs, with blue jeans and traditional shoes. There was no description for the third man.
+
+"This has broken me, not just my spirit, not just my family, but also my mind.", the victim's mom said, her voice trembling.
+
+The bar was a mile from a memorial dedicated to 32 people who were killed in an April 1994 shooting massacre. The bar was also about a half-mile walk away from where most of the 1994 victims were shot. The bar was deemed secure after the stab prompted a lockdown for several hours.
+
+"a man suspected in a deadly stab at a New York inspired bar in America on Monday was taken into custody. on Tuesday", police said. "We are trying to piece everything together." Police are asking for the cooperation of the public to come forward and help us with the investigation. The police chief earlier called the incident heartbreaking. Investigators are collecting evidence from the crime scene, officials said.
+
+The relationships between the suspect and the victim were unclear.
+
+Anyone with information was asked to contact the authorities.'''
+
+fact_table_4 = [
+{'person': {'kind': 'victim', 'sex': 'female', 'age': '55 years old'}},
+{'person': {'kind': 'men', 'count': 'three'}},
+{'object': {'kind': 'bar', 'obj_mod': 'New York inspired', 'location': 'America'}},
+{'event': {'subj': 'victim', 'obj': 'men', 'passive': True, 'kind': 'knife', 'day': 'Monday', 'time': '9 p.m.', 'place': 'bar'}},
+{'object': {'kind': 'bar', 'obj_mod': 'New York inspired'}},
+{'object': {'kind': 'stab', 'place': 'bar'}},
+{'object': {'kind': 'report', 'phrase_mod': 'of stab'}},
+{'event': {'subj': 'police', 'kind': 'respond', 'day': 'Tuesday', 'phrase_mod': 'to report'}},
+{'event': {'subj': 'arrest', 'kind': 'come', 'sub_ord': 'after police respond'}},
+{'object': {'kind': 'collar', 'obj_mod': 'pink'}},
+{'object': {'kind': 'jacket', 'obj_mod': 'green', 'phrase_mod': 'with collar and cuff'}},
+{'object': {'kind': 'jean', 'obj_mod': 'skinny'}},
+{'object': {'kind': 'shoes', 'obj_mod': 'casual'}},
+{'event': {'subj': 'man', 'obj': 'jacket', 'kind': 'wear', 'phrase_mod': 'with jean and shoes'}},
+{'person': {'kind': 'man', 'ordinal': 'first', 'age': '20 years old'}},
+{'event': {'subj': 'man', 'passive': True, 'kind': 'describe'}},
+{'object': {'kind': 'collar', 'obj_mod': 'blue'}},
+{'object': {'kind': 'jacket', 'obj_mod': 'bright', 'phrase_mod': 'with collar and cuff'}},
+{'object': {'kind': 'jean', 'obj_mod': 'blue'}},
+{'object': {'kind': 'shoes', 'obj_mod': 'traditional'}},
+{'event': {'subj': 'man', 'obj': 'jacket', 'kind': 'wear', 'phrase_mod': 'with jean and shoes'}},
+{'person': {'kind': 'man', 'ordinal': 'second', 'age': '43 years old'}},
+{'event': {'subj': 'man', 'passive': True, 'kind': 'describe'}},
+{'person': {'kind': 'man', 'ordinal': 'third'}},
+{'object': {'neg': True, 'kind': 'description', 'phrase_mod': 'for man'}},
+{'event': {'subj': 'voice', 'kind': 'tremble'}},
+{'event': {'subj': 'mom', 'kind': 'say'}},
+{'object': {'kind': 'massacre', 'obj_mod': 'shooting', 'month': 'April', 'year': '1994'}},
+{'event': {'subj': 'people', 'passive': True, 'kind': 'kill', 'phrase_mod': 'in massacre'}},
+{'person': {'kind': 'people', 'count': '32'}},
+{'event': {'subj': 'memorial', 'kind': 'dedicate', 'phrase_mod': 'to people'}},
+{'object': {'kind': 'mile', 'phrase_mod': 'from memorial'}},
+{'object': {'kind': 'restaurant', 'dist': 'mile'}},
+{'object': {'kind': 'victims', 'event_year': '1994'}},
+{'event': {'subj': 'victims', 'passive': True, 'kind': 'shoot'}},
+{'object': {'kind': 'mile walk', 'obj_mod': 'half', 'phrase_mod': 'from where victims shoot'}},
+{'object': {'kind': 'bar', 'dist': 'mile walk'}},
+{'object': {'kind': 'hours', 'obj_mod': 'several'}},
+{'object': {'kind': 'lockdown', 'phrase_mod': 'for hours'}},
+{'event': {'subj': 'stab', 'obj': 'lockdown', 'kind': 'prompt'}},
+{'event': {'subj': 'bar', 'passive': True, 'kind': 'deem', 'event_mod': 'secure', 'sub_ord': 'after stab prompt'}},
+{'object': {'kind': 'bar', 'obj_mod': 'New York inspired', 'location': 'America'}},
+{'object': {'kind': 'stab', 'obj_mod': 'deadly', 'place': 'bar', 'day': 'Monday'}},
+{'event': {'subj': 'man', 'kind': 'suspect', 'phrase_mod': 'in stab'}},
+{'event': {'subj': 'man', 'passive': True, 'kind': 'take', 'phrase_mod': 'into custody', 'day': 'Tuesday'}},
+{'event': {'subj': 'police', 'obj': 'man', 'kind': 'say'}},
+{'event': {'kind': 'piece', 'obj': 'everything', 'event_mod': 'together'}},
+{'event': {'subj': 'we', 'kind': 'try', 'phrase_mod': 'to piece'}},
+{'object': {'kind': 'cooperation', 'phrase_mod': 'of public'}},
+{'event': {'kind': 'come', 'event_mod': 'forward'}},
+{'event': {'kind': 'help', 'obj': 'us', 'phrase_mod': 'with investigation'}},
+{'event': {'subj': 'police', 'kind': 'ask', 'phrase_mod_1': 'for cooperation', 'phrase_mod_2': 'to come and help'}},
+{'person': {'kind': 'chief', 'obj_mod': 'police'}},
+{'object': {'kind': 'incident', 'obj_mod': 'heartbreaking'}},
+{'event': {'subj': 'chief', 'obj': 'incident', 'kind': 'call'}},
+{'object': {'kind': 'scene', 'obj_mod': 'crime'}},
+{'object': {'kind': 'evidence', 'phrase_mod': 'from scene'}},
+{'event': {'subj': 'investigator', 'obj': 'evidence', 'kind': 'collect'}},
+{'event': {'subj': 'official', 'obj': 'investigator', 'kind': 'say'}},
+{'object': {'kind': 'relationship', 'phrase_mod': 'between suspect and victim', 'obj_mod': 'unclear'}},
+{'person': {'kind': 'anyone', 'phrase_mod': 'with information'}},
+{'event': {'kind': 'contact', 'obj': 'authorities'}},
+{'event': {'subj': 'anyone', 'passive': True, 'kind': 'asked', 'phrase_mod': 'to contact'}}
+]
+
+summary_4 = '''A man suspected in a deadly stab at a New York inspired bar in America has been arrested.'''
 # all_articles = [article_3, article_3, article_3, article_3, article_3]
 # all_fact_tables = [fact_table_3, fact_table_3, fact_table_3, fact_table_3, fact_table_3]
-all_articles = [article_3]
-all_fact_tables = [fact_table_3]
+all_articles = [article_4]
+all_fact_tables = [fact_table_4]
 
 pega_1 = 'Police are searching for an Israeli tourist in connection with the fatal shooting of a French soldier at a nightclub in Miami on Sunday night.'
 bart_1 = 'Shooting took place during a fight between one French soldier and two Israeli tourists at this nightclub. Police believe the motive for the shooting is connected to an ongoing dispute between the suspect and the victim.'
@@ -356,8 +439,9 @@ t5_3 = 'A Chinese tourist has been sentenced to 10 years in prison over the shoo
 chatgpt_3 = '''A Chinese tourist has been sentenced to 10 years in prison for the shooting death of an Egyptian soldier during a nightclub brawl in Gaza. The shooting took place during a fight between the soldier and two Chinese tourists and is believed to be connected to an ongoing dispute between the suspect and the victim. The motives and events leading up to the shooting are still being determined by the authorities.'''
 chat_gpt_3_2 = '''A Chinese tourist has been sentenced to 10 years in prison for shooting and killing an Egyptian soldier during a nightclub brawl in Gaza. The incident took place during a fight between the soldier and two Chinese tourists, with the police still trying to determine the circumstances leading up to the shooting and asking for public cooperation in their investigation.'''
 
+
 # summaries = [chatgpt_3, chat_gpt_3_2, pega_3, bart_3, t5_3]
-summaries = [chatgpt_3]
+summaries = [summary_4]
 # 'threshold for word sense disambiguation to check \
 #                               if an attribute/object is appeared as a verb/noun in a fact in the output summary.'
 if __name__ == '__main__':
@@ -386,9 +470,9 @@ if __name__ == '__main__':
     # Load your usual SpaCy model (one of SpaCy English models)
     nlp = spacy.load('en_core_web_lg')
 
-    print('Generating articles ...')
-    # num_articles = 1
-    # all_articles, all_fact_tables = generate_facts(num_articles, print_generated_file=True)
+    # print('Generating articles ...')
+    # num_articles = 3
+    # all_articles, all_fact_tables = generate_facts(num_articles, print_generated_file=False)
 
     # print()
     # print('Loading a summarizer ...')
@@ -403,6 +487,10 @@ if __name__ == '__main__':
     start_time = time.time()
     print('Measuring score ...')
     for summary, article, table in zip(summaries, all_articles, all_fact_tables):
+        for fact in table:
+            print(f'{fact},')
+        print(article)
+        print(summary)
         measure_overall_quality_score(summary, article, table, nlp, eval_configs)
     print()
     print(f'Time it took to measure quality of a summarizer: {time.time() - start_time}s')
