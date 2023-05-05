@@ -35,7 +35,8 @@ def get_synonyms(word, pos):
             print(pos)
             print('unrecognized pos!')
             print()
-            exit(-1)
+            # exit(-1)
+            return {}
 
     word = morphy(word, pos)
 
@@ -79,7 +80,8 @@ def get_antonyms(word, pos):
             print(pos)
             print('unrecognized pos!')
             print()
-            exit(-1)
+            # exit(-1)
+            return {}
 
     word = morphy(word, pos)
 
@@ -191,16 +193,34 @@ def measure_cosine_similarity(word_1, word_2, embeddings_dict, threshold):
 
 def get_years(word):
     aged_match = re.match(r'(\d+) aged', word)
-    years_old_match = re.match(r'(\d+)[\s]years old', word)
+    years_old_match = re.match(r'(\d+)[\s]years? old', word)
 
     if aged_match:
         return aged_match.groups()[0]
     elif years_old_match:
+        print('IN GET YEARS')
+        print(word)
+        print(years_old_match.groups())
         return years_old_match.groups()[0]
     return None
 
+from sentence_transformers import SentenceTransformer
+from numpy.linalg import norm
+
+bert_model = SentenceTransformer('all-MiniLM-L6-v2')
+
+def cosine_similarity(a, b):
+    return np.dot(a,b)/(norm(a,axis=1)*norm(b))
 
 def is_similar(word_1, word_2, pos, embeddings_dict, threshold):
+    # print(word_1, word_2)
+
+    # cosim = cosine_similarity([bert_model.encode(word_1)], bert_model.encode(word_2))
+    # if cosim>=0.6:
+    #     return True
+    # else:
+    #     return False
+
     if len(word_1.split()) > 1:
         return False
 
@@ -249,6 +269,9 @@ def is_similar(word_1, word_2, pos, embeddings_dict, threshold):
                     else:
                         return False
             else:
+                if pos == 'adj':
+                    if get_years(word_2) == get_years(word_1):
+                        return True
                 if measure_cosine_similarity(word_1, word_2, embeddings_dict, threshold):
                     print(f'"{word_1}" and "{word_2}" found to have a similar glove embedding with a threshold of {threshold}.')
                     return True
@@ -257,8 +280,8 @@ def is_similar(word_1, word_2, pos, embeddings_dict, threshold):
 
 
 def has_similar(word, words_list, pos, embeddings_dict, threshold):
-    if len(word.split()) > 1:
-        return False
+    # # if len(word.split()) > 1:
+    #     return False
 
     if pos.lower() in ['num', 'propn', 'pron']:
         return False
@@ -302,6 +325,8 @@ def has_similar(word, words_list, pos, embeddings_dict, threshold):
                     for sec_word in words_list:
                         sec_word = morphy(sec_word, pos)
                         if sec_word:
+                            if get_years(word) == get_years(sec_word):
+                                return True
                             if 'p.m.' in sec_word or 'pm' in sec_word or 'p.m' in sec_word or 'a.m.' in sec_word or 'am' in sec_word or 'a.m' in sec_word:
                                 continue
                             if len(sec_word.split()) > 1:

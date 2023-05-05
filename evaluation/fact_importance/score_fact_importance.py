@@ -80,10 +80,12 @@ def mask_table_facts(cleaned_facts,nlp):
     return masked_facts
 
 
-def get_fact_importance_table(fact_table, nlp, simple_model, bert_model):
+def get_table_embeddings(fact_table, nlp, bert_model):
     cleaned_facts = clean_fact_table(fact_table)
     masked_cleaned_facts = mask_table_facts(cleaned_facts, nlp)
-    scores = simple_model.predict(bert_model.encode(masked_cleaned_facts))
-    for fact, score in zip(masked_cleaned_facts, scores):
-        print(score, fact)
+    return bert_model.encode(masked_cleaned_facts)
+
+
+def get_fact_importance_table(embeddings, simple_model):
+    scores = simple_model.predict(embeddings)
     return scores

@@ -87,7 +87,7 @@ def preprocess_summary(summary: str):
     return summary.strip()
 
 
-def extract_facts_from_summary(summary, nlp):
+def extract_facts_from_summary(summary, nlp, subj_embeddings):
     noun_modifiers = {}  # (word: [(word, pos), is_found])
     obj_counter = {}
     subj_verb = {}
@@ -510,10 +510,11 @@ def extract_facts_from_summary(summary, nlp):
                     else:
                         subj_verb_obj[verb_stem] = [subj_verb_obj[other_verb_stem][-1].copy()]
 
-                    verb_obj[verb_stem].remove(verb_obj[verb_stem][-1])
+                    if verb_stem in verb_obj:
+                        verb_obj[verb_stem].remove(verb_obj[verb_stem][-1])
 
-                    if not len(verb_obj[verb_stem]):
-                        del verb_obj[verb_stem]
+                        if not len(verb_obj[verb_stem]):
+                            del verb_obj[verb_stem]
 
                 else:
                     # if other_verb_stem doesn't have obj

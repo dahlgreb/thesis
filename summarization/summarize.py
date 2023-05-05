@@ -4,6 +4,30 @@ from transformers import AutoTokenizer, AutoModelForSeq2SeqLM
 import torch
 from transformers import pipeline
 
+import os
+from dotenv import load_dotenv
+import openai
+
+load_dotenv()
+openai.api_key = os.environ.get('OPENAI_API_KEY')
+completion = openai.ChatCompletion()
+
+def chatgpt_summarize(sources, chat_prompt=None):
+    summaries = []
+    for source in sources:
+        chat_log = chat_prompt
+        if chat_log is None:
+            chat_log = [{
+                'role': 'system',
+                'content': 'You are a summarizer.',
+            }]
+        chat_log.append({'role': 'user', 'content': f'Summarize the following in one sentence: {source}'})
+        response = completion.create(model='gpt-3.5-turbo', messages=chat_log)
+        answer = response.choices[0]['message']['content']
+        # chat_log.append({'role': 'assistant', 'content': answer})
+        summaries.append(answer)
+    return summaries
+
 
 def bart_summarize(sources, model_name, max_length, min_length):
     summaries = []
@@ -50,6 +74,8 @@ def t5_summarize(sources, model_name, max_length):
 
 def summarize(model_name: str, fine_tuned_data: str, sources: list, max_length: int = 150,
               min_length: int = 30) -> list:
+    if model_name == 'chatgpt':
+        return chatgpt_summarize(sources)
     if fine_tuned_data == 'cnn/dm':
         if model_name == 'facebook/bart-large-cnn':
             bart_summaries = bart_summarize(sources, model_name, max_length, min_length)

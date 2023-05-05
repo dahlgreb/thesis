@@ -158,6 +158,7 @@ def measure_factual_consistency(noun_modifiers, obj_counter, subj_verb, verb_obj
     store_predicted_fact_importance(extracted_facts, fact_importances)
     print('extracted_facts')
     print(extracted_facts)
+    print(cleaned_facts)
     # for score, fact in zip(fact_importances,cleaned_facts):
     #     print(score, fact)
     inconsistent_scores = []
@@ -177,7 +178,7 @@ def measure_factual_consistency(noun_modifiers, obj_counter, subj_verb, verb_obj
         for subj in inconsistent_facts:
             for fact in inconsistent_facts[subj]:
                 print(fact[1]['pred_imp_score'], subj, fact[0])
-                consistency_score -= fact[1]['pred_imp_score']
+                # consistency_score -= fact[1]['pred_imp_score']
                 total_score += fact[1]['pred_imp_score']
         print("*****")
     else:

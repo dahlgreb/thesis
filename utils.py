@@ -83,6 +83,7 @@ def morphy(word, pos):
         # exit(-1)
 
     # if word is a compound (or has two tokens)
+    word = word.replace('-', ' ')
     if len(word.split()) > 1:
         if word.split()[0] in prepositions:
             return ' '.join(word.split()[1:])

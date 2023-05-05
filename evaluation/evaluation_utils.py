@@ -722,7 +722,7 @@ def count_fact_w_mods_from_table(table, embeddings_dict, threshold=0.8, mods=Non
                 if mods:
                     mod_count = 0
                     for mod, mod_pos in mods:
-                        fact_mods = list(fact[key].values())
+                        fact_mods = [word for word in list(fact[key].values()) if type(word)==str]
                         if mod in fact_mods or has_similar(mod, fact_mods, mod_pos, embeddings_dict, threshold):
                             mod_count += 1
                     if mod_count == len(mods):
@@ -1081,6 +1081,7 @@ def get_fact_obj_modifiers(obj, obj_pos, table, embeddings_dict, threshold):
         # TODO: handle fact obj connected by conjunction
         if fact_obj == obj.lower() or is_similar(fact_obj, obj, obj_pos, embeddings_dict, threshold):
             modifiers.extend(get_fact_obj_modifiers_helper(fact_attrs))
+    print(modifiers)
     return modifiers
 
 
@@ -1576,7 +1577,7 @@ def count_matched_fact(table, table_importance, noun_modifiers, obj_counter, sub
                                                                                                                       table,
                                                                                                                       embeddings_dict,
                                                                                                                       threshold):
-                                    fact_count_to_add, is_obj_checked = check_obj_modifiers(fact, fact_obj, importance, obj_val, obj[0][1],
+                                    fact_count_to_add, is_obj_checked = check_obj_modifiers(fact, importance, fact_obj, obj_val, obj[0][1],
                                                                                       noun_modifiers, obj_counter, noun_neg,
                                                                                       table, embeddings_dict, threshold)
                                     fact_count += fact_count_to_add

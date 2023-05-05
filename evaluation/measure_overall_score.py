@@ -3,10 +3,10 @@ import numpy as np
 from evaluation.comprehensiveness.measure_compressiveness import measure_comprehensiveness
 from evaluation.compression.measure_compression_rate import measure_compression_rate
 from evaluation.evaluation_utils import count_matched_fact
-from evaluation.factual_consistency.measure_factual_consistency import measure_factual_consistency
-from extractor.extract_fact import extract_facts_from_summary
+from evaluation.factual_consistency.measure_factual_consistency import measure_factual_consistency, clean_facts
+from extractor.extract_fact import extract_facts_from_summary, cosine_similarity
 from analyzer.wordnet_synsets.wordnet_synsets import load_synsets
-from evaluation.fact_importance.score_fact_importance import get_fact_importance_table
+from evaluation.fact_importance.score_fact_importance import get_fact_importance_table, get_table_embeddings
 # from evaluation.token_importance import *
 # from evaluation.token_importance.evaluate import measure_token_importance
 import pickle
@@ -53,13 +53,50 @@ def measure_overall_quality_score(summary, source, table, nlp, configs):
     simple_model = pickle.load(open('fact_lin_reg_masked.pkl', 'rb'))
     bert_model = SentenceTransformer('all-MiniLM-L6-v2')
 
-    noun_modifiers, obj_counter, subj_verb, verb_obj, subj_verb_obj, noun_neg, event_neg, event_modifiers = extract_facts_from_summary(
-        summary, nlp)
-
     victim_map = victim_maps[grammar_type]
-    table_importance = get_fact_importance_table(table,nlp, simple_model, bert_model)
+    table_embeddings = get_table_embeddings(table, nlp, bert_model)
+    subj_facts = []
+    subj_embeddings = []
+    for fact, embedding in zip(table, table_embeddings):
+        if 'person' in fact or 'object' in fact:
+            subj_facts.append(fact)
+            subj_embeddings.append(embedding)
+    
+    noun_modifiers, obj_counter, subj_verb, verb_obj, subj_verb_obj, noun_neg, event_neg, event_modifiers = extract_facts_from_summary(
+        summary, nlp, subj_embeddings)
+    
+    table_importance = get_fact_importance_table(table_embeddings, simple_model)
+
+    # print('nmod check')
+    # # print(clean_facts(noun_modifiers))
+    # coref_noun_modifiers = {}
+    # coref_obj_counter = {}
+    # coref_subj_verb = {}
+    # coref_verb_obj = {}
+    # coref_subj_verb_obj = {}
+    # coref_noun_neg = {}
+    # coref_event_neg = {}
+    # coref_event_modifiers = {}
+    # for nmod in noun_modifiers:
+    #     cleaned_nmod = clean_facts({nmod:noun_modifiers[nmod]})[0][0]
+    #     cosims = cosine_similarity(subj_embeddings, bert_model.encode(cleaned_nmod))
+    #     replace_fact = subj_facts[np.argmax(cosims)]
+    #     if 'person' in replace_fact:
+    #         replace_subj = f'{replace_fact["person"]["kind"]}_{np.argmax(cosims)}'
+    #         coref_noun_modifiers = {replace_subj: noun_modifiers[nmod]}
+    #         coref_noun_modifiers[replace_subj].append(['female', 'ADJ'])
+    #         print(coref_noun_modifiers)
+    #         print('testing')
+    #         fact_count, seen_facts = count_matched_fact(table, table_importance, coref_noun_modifiers, obj_counter, subj_verb, verb_obj, subj_verb_obj, noun_neg,
+    #                                 event_neg, event_modifiers, victim_map, embeddings_dict, noun_synsets, adj_synsets,
+    #                                 adv_synsets, verb_synsets, threshold)
+    #         print(fact_count, seen_facts)
     # for fact, score in zip(table, table_importance):
     #     print(score, fact)
+    table_importance = table_importance-0.5
+    # table_importance = table_importance/np.linalg.norm(table_importance)
+    # table_importance = (table_importance - np.mean(table_importance))/np.std(table_importance)
+    table_importance = 1/(1+np.e**(-10*table_importance))
     fact_count, seen_facts = count_matched_fact(table, table_importance, noun_modifiers, obj_counter, subj_verb, verb_obj, subj_verb_obj, noun_neg,
                                     event_neg, event_modifiers, victim_map, embeddings_dict, noun_synsets, adj_synsets,
                                     adv_synsets, verb_synsets, threshold)
@@ -68,19 +105,19 @@ def measure_overall_quality_score(summary, source, table, nlp, configs):
     retrieved_important = 0
     for fact_index in seen_facts:
         print(table_importance[fact_index], table[fact_index])
-        if table_importance[fact_index] > 0.51:
-            retrieved_important += table_importance[fact_index]
+        # if table_importance[fact_index] > 0.51:
+        retrieved_important += table_importance[fact_index]
     unseen_facts = set(range(len(table))) - seen_facts
     print('unseen important facts')
     # print(unseen_facts)
     for fact_index in unseen_facts:
-        if table_importance[fact_index] > 0.51:
-            print(table_importance[fact_index], table[fact_index])
+        # if table_importance[fact_index] > 0.51:
+        print(table_importance[fact_index], table[fact_index])
     # retrieved important / all important
     all_important = 0
     for fact_imp in table_importance:
-        if fact_imp > 0.51:
-            all_important += fact_imp
+        # if fact_imp > 0.51:
+        all_important += fact_imp
     importance_recall = retrieved_important/all_important
     compression_rate = measure_compression_rate(summary, source)
     comprehensiveness = measure_comprehensiveness(table, fact_count)
